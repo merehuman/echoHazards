@@ -1,0 +1,20 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+
+# NRC source data files — download locally, never commit
+data/nrc/*.xlsx
+data/nrc/*.csv
+data/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
