@@ -2,7 +2,7 @@
 
 A Python data pipeline and geospatial REST API that collects US government environmental incident records — oil spills, chemical releases, and industrial compliance violations — and makes them searchable by location.
 
-**Live API:** https://echo-hazards.up.railway.app/docs  
+**Live API:** https://echo-hazards.up.railway.app 
 **Data coverage:** NRC spill reports · EPA ECHO facility violations · EPA TRI chemical releases · 248,984 total incidents
 
 ---
