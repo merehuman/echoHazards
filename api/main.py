@@ -6,18 +6,23 @@ oil spills, chemical releases, compliance violations, and contaminated sites —
 sourced from federal government databases and made searchable by proximity.
 
 Data sources:
-  - NRC: National Response Center spill reports (1990–present)
-  - ECHO: EPA Enforcement and Compliance History (1M+ facilities)
-  - TRI: EPA Toxics Release Inventory (coming soon)
+  - NRC: National Response Center spill reports (2024–present)
+  - ECHO: EPA Enforcement and Compliance History (163K+ facilities)
+  - TRI: EPA Toxics Release Inventory (77K+ chemical releases)
 
 Interactive API docs: /docs
+Frontend map: /
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.routes import router
 from config import get_settings
@@ -29,6 +34,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
 
 @asynccontextmanager
@@ -53,5 +60,13 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+# Serve the frontend map at the root
+@app.get("/", include_in_schema=False)
+async def serve_frontend():
+    index = FRONTEND_DIR / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
+    return {"message": "echoHazards API — see /docs for API documentation"}
 
 app.include_router(router)
