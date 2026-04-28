@@ -11,3 +11,7 @@ build/
 venv/
 data/nrc/*.csv
 data/nrc/*.xlsx
+data/echo/*.csv
+data/echo/*.xlsx
+data/tri/*.csv
+data/tri/*.xlsx

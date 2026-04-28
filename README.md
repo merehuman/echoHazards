@@ -2,21 +2,23 @@
 
 A Python data pipeline and geospatial REST API that collects US government environmental incident records — oil spills, chemical releases, and industrial compliance violations — and makes them searchable by location.
 
-**Live API:** https://echo-hazards.yourdomain.com/docs  
-**Data coverage:** NRC spill reports (2024–present) · EPA ECHO facility violations (coming soon)
+**Live API:** https://echo-hazards.up.railway.app/docs  
+**Data coverage:** NRC spill reports · EPA ECHO facility violations · EPA TRI chemical releases · 248,984 total incidents
 
 ---
 
 ## Current data snapshot
 
-| Source | Records ingested | Coverage | Last run |
-|--------|-----------------|----------|----------|
+| Source | Records | Coverage | Last run |
+|--------|---------|----------|----------|
 | NRC (National Response Center) | 7,963 geolocated incidents | 2024–2025 | 2026-04-24 |
-| EPA ECHO | — | coming soon | — |
+| EPA ECHO Exporter | 163,357 facility violations | Current | 2026-04-28 |
+| EPA TRI | 77,664 chemical releases | 2023 | 2026-04-27 |
+| **Total** | **248,984 incidents** | | |
 
-**Top states by incident count:** Louisiana (2,412) · Texas (1,073) · California (439) · Florida (410) · Oklahoma (337) · Alaska (327) · Massachusetts (243) · Washington (203)
+**Top states by NRC incident count:** Louisiana (2,412) · Texas (1,073) · California (439) · Florida (410) · Oklahoma (337) · Alaska (327) · Massachusetts (243) · Washington (203)
 
-**Sample query:** 52 environmental incidents within 50km of San Francisco, including oil spills in the Bay from Golden Gate Ferry, USCG Station San Francisco, and National Tank Lines.
+**Sample query:** 52+ environmental incidents within 50km of San Francisco — oil spills in the Bay, Clean Water Act violations, and industrial chemical releases — filterable by source, medium, and date range.
 
 ---
 
@@ -33,7 +35,8 @@ echoHazards pulls that data together into one place and makes it searchable by l
 | Source | What it covers | How often it updates |
 |--------|---------------|----------------------|
 | **NRC** (National Response Center) | Every reported oil spill, chemical release, and hazardous material incident in the US. Reporting is required by federal law — this is the most complete spill record that exists. | Weekly |
-| **EPA ECHO** *(coming soon)* | Over 1 million industrial facilities regulated under the Clean Air Act, Clean Water Act, and hazardous waste laws — including their full violation and enforcement history. | Daily |
+| **EPA ECHO** | Over 163,000 industrial facilities with violations across the Clean Air Act, Clean Water Act, RCRA hazardous waste, and Safe Drinking Water Act. | Weekly |
+| **EPA TRI** | Annual self-reported toxic chemical releases from 21,000+ industrial facilities — 800+ tracked chemicals with quantities released to air, water, and land. | Annually |
 
 ### What can I search for?
 
