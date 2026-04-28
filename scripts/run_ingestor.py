@@ -32,6 +32,7 @@ def run_nrc():
     with SessionLocal() as db:
         ingestor = NRCIngestor(db, data_dir=settings.nrc_data_dir, batch_size=settings.ingest_batch_size)
         run = ingestor.run()
+        # Extract values before session closes to avoid DetachedInstanceError
         status, inserted, skipped, errored = (
             run.status, run.records_inserted, run.records_skipped, run.records_errored
         )
@@ -43,16 +44,32 @@ def run_nrc():
 
 def run_echo():
     from ingestors.echo import ECHOIngestor
-    logger.info("Starting ECHO ingest")
+    logger.info("Starting ECHO ingest from %s", settings.echo_data_dir)
     with SessionLocal() as db:
-        ingestor = ECHOIngestor(db, batch_size=settings.ingest_batch_size)
+        ingestor = ECHOIngestor(db, data_dir=settings.echo_data_dir, batch_size=settings.ingest_batch_size)
         run = ingestor.run()
         ingestor.close()
+        # Extract values before session closes to avoid DetachedInstanceError
         status, inserted, skipped, errored = (
             run.status, run.records_inserted, run.records_skipped, run.records_errored
         )
     logger.info(
         "ECHO run complete: status=%s inserted=%s skipped=%s errored=%s",
+        status, inserted, skipped, errored,
+    )
+
+
+def run_tri():
+    from ingestors.tri import TRIIngestor
+    logger.info("Starting TRI ingest from %s", settings.tri_data_dir)
+    with SessionLocal() as db:
+        ingestor = TRIIngestor(db, data_dir=settings.tri_data_dir, batch_size=settings.ingest_batch_size)
+        run = ingestor.run()
+        status, inserted, skipped, errored = (
+            run.status, run.records_inserted, run.records_skipped, run.records_errored
+        )
+    logger.info(
+        "TRI run complete: status=%s inserted=%s skipped=%s errored=%s",
         status, inserted, skipped, errored,
     )
 
@@ -66,11 +83,13 @@ def main():
     if target in ("echo", "all"):
         run_echo()
 
-    if target not in ("nrc", "echo", "all"):
-        print(f"Unknown ingestor: {target}. Use: nrc | echo | all")
+    if target in ("tri", "all"):
+        run_tri()
+
+    if target not in ("nrc", "echo", "tri", "all"):
+        print(f"Unknown ingestor: {target}. Use: nrc | echo | tri | all")
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-

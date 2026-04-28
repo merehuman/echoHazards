@@ -10,11 +10,16 @@ build/
 .venv/
 venv/
 
-# NRC source data files — download locally, never commit
-data/nrc/*.xlsx
-data/nrc/*.csv
+# All source data — download locally, never commit
+# NRC xlsx files (~100MB each), ECHO CSV (~1GB), TRI CSV (~50MB)
 data/
 
 # OS artifacts
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Editor artifacts
+.cursor/
+*.suo
+.vs/

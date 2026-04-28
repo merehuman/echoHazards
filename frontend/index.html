@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>echoHazards — Environmental Incident Proximity Search</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:        #0a0c0f;
+      --panel:     #0f1318;
+      --border:    #1e2530;
+      --border-hi: #2e3d50;
+      --text:      #c8d4e0;
+      --text-dim:  #4a5a6a;
+      --text-hi:   #e8f0f8;
+      --mono:      'Share Tech Mono', monospace;
+      --sans:      'Barlow', sans-serif;
+      --spill:     #ff6b35;
+      --violation: #f7b731;
+      --release:   #a55eea;
+      --site:      #45aaf2;
+      --unknown:   #4a5a6a;
+      --water:     #45aaf2;
+      --air:       #a8d8a8;
+      --land:      #c8a96e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 300;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      flex-shrink: 0;
+      z-index: 1000;
+    }
+
+    .wordmark { font-family: var(--mono); font-size: 14px; letter-spacing: 0.08em; color: var(--text-hi); }
+    .wordmark span { color: var(--spill); }
+
+    .status-bar { font-family: var(--mono); font-size: 11px; color: var(--text-dim); display: flex; gap: 1.5rem; }
+    .live { color: #4caf50; }
+
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 340px;
+      flex-shrink: 0;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .search-section { padding: 1.25rem; border-bottom: 1px solid var(--border); }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .search-row { display: flex; gap: 6px; margin-bottom: 8px; }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-hi);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 400;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--border-hi); }
+    input[type="text"]::placeholder { color: var(--text-dim); }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--spill); color: var(--spill); }
+    .btn-primary { border-color: var(--spill); color: var(--spill); }
+    .btn-primary:hover { background: var(--spill); color: var(--bg); }
+
+    .radius-row { display: flex; align-items: center; gap: 10px; }
+    .radius-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+    input[type="range"] { flex: 1; accent-color: var(--spill); cursor: pointer; }
+    .radius-val { font-family: var(--mono); font-size: 12px; color: var(--text-hi); min-width: 48px; text-align: right; }
+
+    .filter-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+
+    .filter-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 0.5rem; }
+
+    .chip {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.12s;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .chip:hover { border-color: var(--border-hi); color: var(--text); }
+    .chip.active { border-color: currentColor; }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* type chip colors */
+    .chip-spill    { color: var(--spill); }
+    .chip-violation{ color: var(--violation); }
+    .chip-release  { color: var(--release); }
+
+    /* source chip colors */
+    .chip-nrc  { color: #e0e0e0; }
+    .chip-echo { color: #80cbc4; }
+    .chip-tri  { color: #ce93d8; }
+    .chip-all  { color: var(--text); }
+
+    /* medium chip colors */
+    .chip-water { color: var(--water); }
+    .chip-air   { color: var(--air); }
+    .chip-land  { color: var(--land); }
+
+    .results-header {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .results-count { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+    .results-count strong { color: var(--text-hi); font-weight: 400; }
+
+    .results-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+    .incident-card {
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+      border-left: 2px solid transparent;
+    }
+    .incident-card:hover { background: rgba(255,255,255,0.02); }
+    .incident-card.active { background: rgba(255,107,53,0.05); }
+
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .card-material { font-size: 13px; font-weight: 500; color: var(--text-hi); line-height: 1.3; }
+    .card-type-badge {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      padding: 2px 5px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .card-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      display: flex;
+      gap: 10px;
+      margin-top: 5px;
+      flex-wrap: wrap;
+    }
+    .card-meta span { white-space: nowrap; }
+    .card-party { font-size: 11px; color: var(--text-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .medium-tag {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      padding: 2px 5px;
+      border: 1px solid currentColor;
+      opacity: 0.7;
+    }
+
+    .state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 2rem; text-align: center; }
+    .state-msg .icon { font-size: 32px; margin-bottom: 1rem; opacity: 0.3; }
+    .state-msg p { font-family: var(--mono); font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--spill); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg { padding: 0.75rem 1.25rem; font-family: var(--mono); font-size: 11px; color: #ef5350; border-bottom: 1px solid var(--border); display: none; }
+
+    /* ── LEGEND ── */
+    .legend {
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .legend-items { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── MAP ── */
+    #map { flex: 1; background: #0a0c0f; }
+
+    .leaflet-popup-content-wrapper {
+      background: var(--panel);
+      border: 1px solid var(--border-hi);
+      border-radius: 0;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+    .leaflet-popup-tip { background: var(--panel); }
+    .leaflet-popup-close-button { color: var(--text-dim) !important; }
+
+    .popup-material { font-weight: 500; font-size: 14px; color: var(--text-hi); margin-bottom: 6px; }
+    .popup-type { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border: 1px solid currentColor; display: inline-block; margin-bottom: 8px; }
+    .popup-row { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin: 3px 0; }
+    .popup-row span { color: var(--text); }
+
+    .radius-circle { stroke: var(--spill); stroke-width: 1; stroke-dasharray: 4 4; fill: rgba(255, 107, 53, 0.04); }
+    .pin-svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">echo<span>Hazards</span></div>
+  <div class="status-bar">
+    <span id="db-status">⬤ <span class="live">CONNECTING…</span></span>
+    <span id="total-count">— incidents</span>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+
+    <div class="search-section">
+      <div class="section-label">Location Search</div>
+      <div class="search-row">
+        <input type="text" id="address-input" placeholder="City, address, or zip code…" autocomplete="off">
+        <button class="btn btn-primary" onclick="geocodeAndSearch()">SEARCH</button>
+      </div>
+      <div class="radius-row">
+        <span class="radius-label">RADIUS</span>
+        <input type="range" id="radius-slider" min="5" max="200" value="25" step="5" oninput="updateRadius(this.value)">
+        <span class="radius-val" id="radius-display">25 km</span>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="section-label">Source</div>
+      <div class="filter-row" id="source-chips">
+        <div class="chip chip-all active" data-source="" onclick="setFilter('source', '', this)">ALL</div>
+        <div class="chip chip-nrc" data-source="NRC" onclick="setFilter('source', 'NRC', this)">
+          <span class="chip-dot" style="background:#e0e0e0"></span>NRC SPILLS
+        </div>
+        <div class="chip chip-echo" data-source="ECHO" onclick="setFilter('source', 'ECHO', this)">
+          <span class="chip-dot" style="background:#80cbc4"></span>ECHO VIOLATIONS
+        </div>
+        <div class="chip chip-tri" data-source="TRI" onclick="setFilter('source', 'TRI', this)">
+          <span class="chip-dot" style="background:#ce93d8"></span>TRI RELEASES
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="section-label">Medium</div>
+      <div class="filter-row" id="medium-chips">
+        <div class="chip chip-all active" data-medium="" onclick="setFilter('medium', '', this)">ALL</div>
+        <div class="chip chip-water" data-medium="water" onclick="setFilter('medium', 'water', this)">
+          <span class="chip-dot" style="background:var(--water)"></span>WATER
+        </div>
+        <div class="chip chip-air" data-medium="air" onclick="setFilter('medium', 'air', this)">
+          <span class="chip-dot" style="background:var(--air)"></span>AIR
+        </div>
+        <div class="chip chip-land" data-medium="land" onclick="setFilter('medium', 'land', this)">
+          <span class="chip-dot" style="background:var(--land)"></span>LAND
+        </div>
+      </div>
+    </div>
+
+    <div class="results-header">
+      <span class="results-count" id="results-count">Enter a location to search</span>
+    </div>
+
+    <div id="error-msg" class="error-msg"></div>
+
+    <div class="results-list" id="results-list">
+      <div class="state-msg">
+        <div class="icon">⬡</div>
+        <p>Search an address or city<br>to find nearby environmental<br>incidents across NRC, ECHO,<br>and TRI federal databases.</p>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="section-label">Incident Type</div>
+      <div class="legend-items">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--spill)"></div>Spill (NRC)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--violation)"></div>Violation (ECHO)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--release)"></div>Release (TRI)</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <div id="map"></div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+
+// State
+let currentLat = null;
+let currentLng = null;
+let currentRadius = 25;
+let currentSource = '';
+let currentMedium = '';
+let activeCardId = null;
+let radiusCircle = null;
+let markers = {};
+
+// Colors by incident type
+const TYPE_COLORS = {
+  spill:     '#ff6b35',
+  violation: '#f7b731',
+  release:   '#a55eea',
+  site:      '#45aaf2',
+};
+
+function typeColor(type) {
+  return TYPE_COLORS[type] || '#4a5a6a';
+}
+
+// Pin shapes by incident type
+// spill = circle, violation = diamond, release = triangle
+function makePinSvg(type) {
+  const color = typeColor(type);
+  let shape = '';
+
+  if (type === 'spill') {
+    shape = `<path d="M10 0C4.477 0 0 4.477 0 10c0 7.5 10 16 10 16s10-8.5 10-16C20 4.477 15.523 0 10 0z" fill="${color}" fill-opacity="0.9"/>
+      <circle cx="10" cy="10" r="4" fill="#0a0c0f" fill-opacity="0.6"/>`;
+  } else if (type === 'violation') {
+    shape = `<path d="M10 0L20 10L10 20L0 10Z" fill="${color}" fill-opacity="0.9" transform="translate(0,-2)"/>
+      <circle cx="10" cy="8" r="3" fill="#0a0c0f" fill-opacity="0.6"/>`;
+  } else if (type === 'release') {
+    shape = `<path d="M10 0L20 20L0 20Z" fill="${color}" fill-opacity="0.9"/>
+      <circle cx="10" cy="14" r="3" fill="#0a0c0f" fill-opacity="0.6"/>`;
+  } else {
+    shape = `<rect x="2" y="2" width="16" height="16" fill="${color}" fill-opacity="0.9"/>
+      <circle cx="10" cy="10" r="3" fill="#0a0c0f" fill-opacity="0.6"/>`;
+  }
+
+  return L.divIcon({
+    html: `<div class="pin-svg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 20 22">${shape}</svg></div>`,
+    iconSize: [20, 22],
+    iconAnchor: [10, 22],
+    popupAnchor: [0, -24],
+    className: '',
+  });
+}
+
+// Map init
+const map = L.map('map', { center: [39.5, -98.35], zoom: 4 });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://carto.com/">CARTO</a> | NRC / EPA ECHO / EPA TRI',
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+map.on('click', function(e) {
+  currentLat = e.latlng.lat;
+  currentLng = e.latlng.lng;
+  document.getElementById('address-input').value = '';
+  document.getElementById('address-input').placeholder = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+  fetchIncidents();
+});
+
+// Status check
+async function checkStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    const data = await res.json();
+    document.getElementById('db-status').innerHTML =
+      data.status === 'ok'
+        ? '⬤ <span class="live">API CONNECTED</span>'
+        : '⬤ <span style="color:#ef5350">API DEGRADED</span>';
+    const pipeline = await fetch(`${API_BASE}/pipeline/status`);
+    const pd = await pipeline.json();
+    document.getElementById('total-count').textContent =
+      pd.total_incidents.toLocaleString() + ' incidents';
+  } catch(e) {
+    document.getElementById('db-status').innerHTML = '⬤ <span style="color:#ef5350">API OFFLINE</span>';
+  }
+}
+
+// Geocode
+async function geocodeAndSearch() {
+  const query = document.getElementById('address-input').value.trim();
+  if (!query) return;
+  showLoading();
+  try {
+    const res = await fetch(
+      `${NOMINATIM}?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=us`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    const results = await res.json();
+    if (!results.length) { showError('Location not found.'); return; }
+    currentLat = parseFloat(results[0].lat);
+    currentLng = parseFloat(results[0].lon);
+    map.setView([currentLat, currentLng], 10);
+    fetchIncidents();
+  } catch(e) {
+    showError('Geocoding failed. Check your connection.');
+  }
+}
+
+// Fetch
+async function fetchIncidents() {
+  if (currentLat === null) return;
+  showLoading();
+
+  let url = `${API_BASE}/incidents?lat=${currentLat}&lng=${currentLng}&radius_km=${currentRadius}&page_size=200`;
+  if (currentSource) url += `&source=${currentSource}`;
+  if (currentMedium) url += `&medium=${currentMedium}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const data = await res.json();
+    renderResults(data.total, data.results);
+    renderMarkers(data.results);
+    drawRadiusCircle();
+    hideError();
+  } catch(e) {
+    showError('Failed to fetch incidents. Is the API running?');
+  }
+}
+
+// Render sidebar list
+function renderResults(total, items) {
+  document.getElementById('results-count').innerHTML =
+    `<strong>${total.toLocaleString()}</strong> incidents found`;
+
+  const list = document.getElementById('results-list');
+
+  if (!items.length) {
+    list.innerHTML = `<div class="state-msg"><div class="icon">◌</div>
+      <p>No incidents found<br>within ${currentRadius}km.<br>Try expanding the radius.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(inc => {
+    const color = typeColor(inc.incident_type);
+    const material = inc.material ? inc.material.substring(0, 80) + (inc.material.length > 80 ? '…' : '') : 'Unknown';
+    const date = inc.incident_date || '—';
+    const loc = [inc.city, inc.state].filter(Boolean).join(', ') || inc.state || '—';
+    const qty = inc.quantity && inc.quantity > 0
+      ? `${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}`.trim()
+      : null;
+
+    const mediumColor = { water: 'var(--water)', air: 'var(--air)', land: 'var(--land)' }[inc.medium] || '';
+
+    return `<div class="incident-card" id="card-${inc.id}"
+        style="border-left-color: ${color}"
+        onclick="focusIncident('${inc.id}', ${inc.lat}, ${inc.lng})">
+      <div class="card-top">
+        <div class="card-material">${material}</div>
+        <div class="card-type-badge" style="color:${color}">${inc.incident_type.toUpperCase()}</div>
+      </div>
+      ${inc.responsible_party ? `<div class="card-party">${inc.responsible_party}</div>` : ''}
+      <div class="card-meta">
+        <span>${date}</span>
+        <span>${loc}</span>
+        ${qty ? `<span>${qty}</span>` : ''}
+        ${inc.source ? `<span style="opacity:0.6">${inc.source}</span>` : ''}
+        ${inc.medium && inc.medium !== 'unknown'
+          ? `<span class="medium-tag" style="color:${mediumColor}">${inc.medium.toUpperCase()}</span>`
+          : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Render map markers
+function clearMarkers() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+}
+
+function renderMarkers(items) {
+  clearMarkers();
+  items.forEach(inc => {
+    const marker = L.marker([inc.lat, inc.lng], { icon: makePinSvg(inc.incident_type) });
+    const color = typeColor(inc.incident_type);
+    const material = inc.material ? inc.material.substring(0, 120) + (inc.material.length > 120 ? '…' : '') : 'Unknown';
+    const qty = inc.quantity && inc.quantity > 0
+      ? `<div class="popup-row">QUANTITY <span>${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}</span></div>` : '';
+    const party = inc.responsible_party
+      ? `<div class="popup-row">RESPONSIBLE <span>${inc.responsible_party}</span></div>` : '';
+    const medium = inc.medium && inc.medium !== 'unknown'
+      ? `<div class="popup-row">MEDIUM <span>${inc.medium.toUpperCase()}</span></div>` : '';
+
+    marker.bindPopup(`
+      <div class="popup-material">${material}</div>
+      <div class="popup-type" style="color:${color}">${inc.incident_type.toUpperCase()} · ${inc.source}</div>
+      <div class="popup-row">DATE <span>${inc.incident_date || '—'}</span></div>
+      <div class="popup-row">LOCATION <span>${[inc.city, inc.state].filter(Boolean).join(', ') || '—'}</span></div>
+      ${qty}${party}${medium}
+    `, { maxWidth: 280 });
+
+    marker.on('click', () => { setActiveCard(inc.id); scrollToCard(inc.id); });
+    marker.addTo(map);
+    markers[inc.id] = marker;
+  });
+}
+
+// Radius circle
+function drawRadiusCircle() {
+  if (radiusCircle) map.removeLayer(radiusCircle);
+  if (currentLat === null) return;
+  radiusCircle = L.circle([currentLat, currentLng], {
+    radius: currentRadius * 1000,
+    className: 'radius-circle',
+    interactive: false,
+  }).addTo(map);
+}
+
+// Card focus
+function focusIncident(id, lat, lng) {
+  setActiveCard(id);
+  map.setView([lat, lng], Math.max(map.getZoom(), 12));
+  if (markers[id]) markers[id].openPopup();
+}
+
+function setActiveCard(id) {
+  if (activeCardId) {
+    const prev = document.getElementById(`card-${activeCardId}`);
+    if (prev) prev.classList.remove('active');
+  }
+  activeCardId = id;
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.classList.add('active');
+}
+
+function scrollToCard(id) {
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Filter controls
+function setFilter(type, value, el) {
+  const group = type === 'source' ? 'source-chips' : 'medium-chips';
+  document.querySelectorAll(`#${group} .chip`).forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  if (type === 'source') currentSource = value;
+  else currentMedium = value;
+  if (currentLat !== null) fetchIncidents();
+}
+
+function updateRadius(val) {
+  currentRadius = parseInt(val);
+  document.getElementById('radius-display').textContent = `${val} km`;
+  if (currentLat !== null) fetchIncidents();
+}
+
+// UI states
+function showLoading() {
+  document.getElementById('results-count').innerHTML = 'Searching…';
+  document.getElementById('results-list').innerHTML = `<div class="state-msg">
+    <div class="spinner"></div>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">Querying database…</p></div>`;
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+  document.getElementById('results-list').innerHTML = `<div class="state-msg">
+    <div class="icon" style="opacity:0.5">⚠</div><p>${msg}</p></div>`;
+  document.getElementById('results-count').textContent = 'Error';
+}
+
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+document.getElementById('address-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') geocodeAndSearch();
+});
+
+checkStatus();
+</script>
+</body>
+</html>

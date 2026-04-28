@@ -1,226 +1,269 @@
 """
 EPA ECHO (Enforcement and Compliance History Online) ingestor.
 
-Covers 1M+ regulated facilities with violations across Clean Air Act,
-Clean Water Act, RCRA hazardous waste, and Safe Drinking Water Act.
+Uses the ECHO Exporter bulk download instead of the REST API.
+The Exporter is more reliable, updated weekly, and covers 1.5M+ facilities
+across all programs: CAA, CWA, RCRA, SDWA.
 
-API docs: https://echo.epa.gov/tools/web-services
-No API key required. Be respectful of rate limits.
+Data source:
+  https://echo.epa.gov/tools/data-downloads (ECHO Exporter ZIP, ~392MB)
+  Download and extract to data/echo/ECHO_EXPORTER.csv (or similar name)
 
-Strategy: query by state, paginate through all facilities with recent violations.
-This gives us nationwide coverage without needing to guess bounding boxes.
+Key columns used:
+  FAC_NAME, FAC_STREET, FAC_CITY, FAC_STATE, FAC_ZIP
+  FAC_LAT, FAC_LONG (decimal degrees)
+  REGISTRY_ID (stable facility identifier)
+  FAC_PENALTY_COUNT, FAC_TOTAL_PENALTIES
+  FAC_INSPECTION_COUNT, FAC_DATE_LAST_INSPECTION
+  CAA_VIOLATIONS_FOUND, CWA_VIOLATIONS_FOUND,
+  RCRA_VIOLATIONS_FOUND, SDWA_VIOLATIONS_FOUND
+  FAC_FORMAL_ACTION_COUNT
 """
 
+import csv
 import logging
-import time
 import uuid
 from datetime import date, datetime
+from pathlib import Path
 from typing import Iterator
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-from config import get_settings
-from models.incident import IncidentSource, IncidentType, Medium, Severity
 from ingestors.base import BaseIngestor
+from models.incident import IncidentSource, IncidentType, Medium, Severity
 
 logger = logging.getLogger(__name__)
 
-settings = get_settings()
-
-# All US states + territories to iterate over
-_US_STATES = [
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-    "DC", "PR", "VI",
+# Correct column names from actual ECHO Exporter CSV
+_VIOLATION_FIELDS = [
+    "CAA_QTRS_WITH_NC",
+    "CWA_QTRS_WITH_NC",
+    "RCRA_QTRS_WITH_NC",
+    "FAC_QTRS_WITH_NC",
+    "FAC_SNC_FLG",
+    "CAA_FORMAL_ACTION_COUNT",
 ]
 
-ECHO_BASE = "https://echo.epa.gov/Rest/api"
+
+def _parse_float(val) -> float | None:
+    if val is None:
+        return None
+    try:
+        return float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_date(val) -> date | None:
+    if not val or str(val).strip() in ("", "None", "null"):
+        return None
+    raw = str(val).strip()
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
+        try:
+            return datetime.strptime(raw, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _has_violation(row: dict) -> bool:
+    """Return True if the facility has any recorded violations."""
+    # Check quarters with non-compliance
+    for field in ["CAA_QTRS_WITH_NC", "CWA_QTRS_WITH_NC", "RCRA_QTRS_WITH_NC", "FAC_QTRS_WITH_NC"]:
+        val = row.get(field, "").strip()
+        if val and val not in ("0", "", "None", "null"):
+            try:
+                if float(val) > 0:
+                    return True
+            except ValueError:
+                pass
+    # Check SNC flag
+    if row.get("FAC_SNC_FLG", "").strip().upper() == "Y":
+        return True
+    # Check formal actions
+    formal = row.get("CAA_FORMAL_ACTION_COUNT", "").strip()
+    if formal and formal not in ("0", ""):
+        try:
+            if float(formal) > 0:
+                return True
+        except ValueError:
+            pass
+    return False
+
+
+def _classify_medium(row: dict) -> str:
+    """Infer medium from which program has non-compliance quarters."""
+    def nonzero(field):
+        val = row.get(field, "").strip()
+        if not val or val in ("0", "", "None"):
+            return False
+        try:
+            return float(val) > 0
+        except ValueError:
+            return False
+
+    if nonzero("CWA_QTRS_WITH_NC"):
+        return Medium.WATER.value
+    if nonzero("CAA_QTRS_WITH_NC"):
+        return Medium.AIR.value
+    if nonzero("RCRA_QTRS_WITH_NC"):
+        return Medium.LAND.value
+
+    # Fallback: compliance status strings
+    cwa = row.get("CWA_COMPLIANCE_STATUS", "").lower()
+    caa = row.get("CAA_COMPLIANCE_STATUS", "").lower()
+    rcra = row.get("RCRA_COMPLIANCE_STATUS", "").lower()
+    if any(x in cwa for x in ["violation", "nc ", "non-complian"]):
+        return Medium.WATER.value
+    if any(x in caa for x in ["violation", "nc ", "non-complian"]):
+        return Medium.AIR.value
+    if any(x in rcra for x in ["violation", "nc ", "non-complian"]):
+        return Medium.LAND.value
+
+    return Medium.UNKNOWN.value
+
+
+def _classify_severity(row: dict) -> str:
+    """Estimate severity from penalty amounts and SNC flags."""
+    for field in ["CAA_PENALTIES", "CWA_PENALTIES", "RCRA_PENALTIES"]:
+        penalty = _parse_float(row.get(field) or "0") or 0.0
+        if penalty >= 100_000:
+            return Severity.CRITICAL.value
+        if penalty >= 10_000:
+            return Severity.MAJOR.value
+        if penalty > 0:
+            return Severity.MINOR.value
+
+    if row.get("FAC_SNC_FLG", "").strip().upper() == "Y":
+        return Severity.MAJOR.value
+
+    formal = _parse_float(row.get("CAA_FORMAL_ACTION_COUNT") or "0") or 0.0
+    if formal > 0:
+        return Severity.MAJOR.value
+
+    return Severity.UNKNOWN.value
+
+
+def _violation_description(row: dict) -> str:
+    """Build a human-readable description of which programs have violations."""
+    programs = []
+    mapping = [
+        ("CAA_QTRS_WITH_NC", "Clean Air Act"),
+        ("CWA_QTRS_WITH_NC", "Clean Water Act"),
+        ("RCRA_QTRS_WITH_NC", "Hazardous Waste (RCRA)"),
+        ("SDWA_SNC_FLAG",     "Safe Drinking Water Act"),
+    ]
+    for field, label in mapping:
+        val = row.get(field, "").strip()
+        if not val or val in ("0", "", "N", "None"):
+            continue
+        try:
+            if float(val) > 0:
+                programs.append(label)
+        except ValueError:
+            if val.upper() == "Y":
+                programs.append(label)
+
+    return (", ".join(programs) + " violation") if programs else "Regulatory violation"
 
 
 class ECHOIngestor(BaseIngestor):
     source = IncidentSource.ECHO
 
-    def __init__(self, db, batch_size: int = 500):
+    def __init__(self, db, data_dir: str = "./data/echo", batch_size: int = 500):
         super().__init__(db, batch_size)
-        self.client = httpx.Client(
-            timeout=30.0,
-            headers={
-                "User-Agent": settings.echo_user_agent,
-                "Accept": "application/json",
-            },
-        )
+        self.data_dir = Path(data_dir)
 
     def fetch_records(self) -> Iterator[dict]:
         """
-        Query ECHO for facilities with recent violations, state by state.
-        Uses the QID pagination pattern: get_facilities → get_qid → results.
+        Read the ECHO Exporter CSV and yield one dict per facility
+        that has at least one recorded violation.
         """
-        for state in _US_STATES:
-            logger.info("ECHO: fetching facilities for state=%s", state)
-            try:
-                yield from self._fetch_state(state)
-            except Exception as exc:
-                logger.error("ECHO: failed to fetch state %s: %s", state, exc)
-            # Respectful rate limiting
-            time.sleep(settings.echo_rate_limit_delay)
+        csv_files = (
+            list(self.data_dir.glob("ECHO_EXPORTER*.csv"))
+            + list(self.data_dir.glob("echo_exporter*.csv"))
+            + list(self.data_dir.glob("*.csv"))
+        )
 
-    def _fetch_state(self, state: str) -> Iterator[dict]:
-        """Fetch all facilities with violations in a given state."""
-        qid = self._get_qid(state)
-        if not qid:
+        if not csv_files:
+            logger.warning(
+                "No ECHO CSV files found in %s. "
+                "Download the ECHO Exporter ZIP from "
+                "https://echo.epa.gov/tools/data-downloads and extract to %s",
+                self.data_dir, self.data_dir,
+            )
             return
 
-        page = 1
-        while True:
-            records = self._get_page(qid, page)
-            if not records:
-                break
+        for path in csv_files:
+            logger.info("Reading ECHO Exporter: %s", path.name)
+            yield from self._read_file(path)
 
-            for record in records:
-                yield record
-
-            if len(records) < 100:
-                break  # Last page
-            page += 1
-            time.sleep(0.2)  # Brief pause between pages
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(httpx.HTTPError),
-    )
-    def _get_qid(self, state: str) -> str | None:
-        """
-        Step 1 of the ECHO pagination pattern: get a query ID (QID).
-        The QID represents a cached query result on ECHO's servers, valid ~30 min.
-        """
-        resp = self.client.get(
-            f"{ECHO_BASE}/air_rest_services.get_facilities",
-            params={
-                "output": "JSON",
-                "p_st": state,
-                "p_vio_flag": "Y",          # only facilities with violations
-                "p_act": "Y",               # only active facilities
-                "responseset": 100,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-        results = data.get("Results", {})
-        qid = results.get("QueryID")
-
-        if not qid:
-            logger.debug("ECHO: no QID returned for state=%s (may have 0 results)", state)
-            return None
-
-        return qid
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(httpx.HTTPError),
-    )
-    def _get_page(self, qid: str, page: int) -> list[dict]:
-        """Step 2: paginate through results using the QID."""
-        resp = self.client.get(
-            f"{ECHO_BASE}/air_rest_services.get_qid",
-            params={
-                "output": "JSON",
-                "qid": qid,
-                "pageno": page,
-                "responseset": 100,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-        return data.get("Results", {}).get("AIRFacilities", [])
+    def _read_file(self, path: Path) -> Iterator[dict]:
+        try:
+            with open(path, encoding="latin-1", errors="replace") as f:
+                reader = csv.DictReader(f)
+                total = 0
+                yielded = 0
+                for row in reader:
+                    total += 1
+                    # Strip whitespace from all values
+                    row = {k: (v.strip() if v else "") for k, v in row.items()}
+                    if _has_violation(row):
+                        yielded += 1
+                        yield row
+                    if total % 100_000 == 0:
+                        logger.info(
+                            "ECHO: scanned %d rows, %d with violations so far",
+                            total, yielded,
+                        )
+                logger.info(
+                    "ECHO: finished %s — %d total rows, %d with violations",
+                    path.name, total, yielded,
+                )
+        except Exception as exc:
+            logger.error("ECHO: failed to read %s: %s", path, exc)
 
     def normalize(self, raw: dict) -> dict | None:
-        """Map an ECHO facility record to the unified incident schema."""
-        lat_raw = raw.get("FacLat") or raw.get("Latitude83")
-        lng_raw = raw.get("FacLong") or raw.get("Longitude83")
+        """Map an ECHO Exporter row to the unified incident schema."""
 
-        try:
-            lat = float(lat_raw)
-            lng = float(lng_raw)
-        except (TypeError, ValueError):
+        # Coordinates
+        lat = _parse_float(raw.get("FAC_LAT") or raw.get("LATITUDE83"))
+        lng = _parse_float(raw.get("FAC_LONG") or raw.get("LONGITUDE83"))
+
+        if lat is None or lng is None:
             return None
-
         if lat == 0.0 and lng == 0.0:
             return None
-
         if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
             return None
 
-        source_id = raw.get("RegistryID") or raw.get("ProgramSystemAcronym") or raw.get("FacilityName")
-        if not source_id:
+        # Source ID
+        source_id = raw.get("REGISTRY_ID") or raw.get("FRS_ID")
+        if not source_id or not source_id.strip():
             return None
 
-        # Determine severity from violation flag fields
-        severity = self._classify_severity(raw)
+        state = (raw.get("FAC_STATE") or "").strip()
 
         return {
             "id": uuid.uuid4(),
             "source": IncidentSource.ECHO.value,
-            "source_id": str(source_id),
+            "source_id": str(source_id).strip(),
             "incident_type": IncidentType.VIOLATION.value,
-            "severity": severity,
-            "material": raw.get("AirPollutantsDesc"),
+            "severity": _classify_severity(raw),
+            "material": _violation_description(raw),
             "quantity": None,
             "quantity_unit": None,
-            "medium": Medium.AIR.value,  # Air rest services → air medium
-            "facility_name": raw.get("FacilityName"),
-            "responsible_party": raw.get("FacilityName"),
-            "address": raw.get("LocationAddress"),
-            "city": raw.get("CityName"),
-            "state": raw.get("StateCode"),
-            "zip_code": raw.get("ZipCode"),
+            "medium": _classify_medium(raw),
+            "facility_name": raw.get("FAC_NAME"),
+            "responsible_party": raw.get("FAC_NAME"),
+            "address": raw.get("FAC_STREET"),
+            "city": raw.get("FAC_CITY"),
+            "state": state[:2] if state else None,
+            "zip_code": raw.get("FAC_ZIP"),
             "lat": lat,
             "lng": lng,
             "location": f"SRID=4326;POINT({lng} {lat})",
-            "incident_date": self._parse_most_recent_violation(raw),
-            "raw": raw,
+            "incident_date": _parse_date(raw.get("FAC_DATE_LAST_INSPECTION")),
+            "raw": {k: v for k, v in raw.items()},
         }
 
-    def _classify_severity(self, raw: dict) -> str:
-        """
-        Estimate severity from ECHO penalty and violation fields.
-        ECHO doesn't have a single severity field, so we infer from context.
-        """
-        penalty = raw.get("TotalPenalties") or "0"
-        try:
-            penalty_val = float(str(penalty).replace(",", "").replace("$", ""))
-        except (ValueError, TypeError):
-            penalty_val = 0
-
-        if penalty_val >= 100_000:
-            return Severity.CRITICAL.value
-        if penalty_val >= 10_000:
-            return Severity.MAJOR.value
-        if penalty_val > 0:
-            return Severity.MINOR.value
-
-        # Fallback: check for formal enforcement actions
-        if raw.get("FormalEnfActions", "0") not in ("0", None, ""):
-            return Severity.MAJOR.value
-
-        return Severity.UNKNOWN.value
-
-    def _parse_most_recent_violation(self, raw: dict) -> date | None:
-        """Extract the date of the most recent violation."""
-        date_str = raw.get("MostRecentInspectionDate") or raw.get("LastInspDate")
-        if not date_str:
-            return None
-        try:
-            return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            return None
-
     def close(self):
-        self.client.close()
+        pass  # No HTTP client to close
