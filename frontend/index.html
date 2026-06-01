@@ -8,27 +8,52 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg:        #0a0c0f;
-      --panel:     #0f1318;
-      --border:    #1e2530;
-      --border-hi: #2e3d50;
-      --text:      #c8d4e0;
-      --text-dim:  #4a5a6a;
-      --text-hi:   #e8f0f8;
-      --mono:      'Share Tech Mono', monospace;
-      --sans:      'Barlow', sans-serif;
-      --spill:     #ff6b35;
-      --violation: #f7b731;
-      --release:   #a55eea;
-      --site:      #45aaf2;
-      --unknown:   #4a5a6a;
-      --water:     #45aaf2;
-      --air:       #a8d8a8;
-      --land:      #c8a96e;
+      /* ── UI base ── */
+      --bg:              #ffffff;
+      --panel:           #ffffff;
+      --input-bg:        #ffffff;
+      --border:          #e2e5ea;
+      --border-hi:       #c5cad3;
+      --text:            #3d4654;
+      --text-dim:        #909db0;
+      --text-hi:         #8b8b8b;
+      --text-on-accent:  #ffffff;
+
+      /* ── Status ── */
+      --success:         #4caf50;
+      --error:           #ef5350;
+
+      /* ── Accent (buttons, wordmark highlight, links) ── */
+      --accent:          #454545;
+
+      /* ── Data sources (map markers, list badges, chips) ── */
+      --source-nrc:      #d50000;
+      --source-echo:     #562424;
+      --source-tri:      rgb(255, 115, 0);
+
+      /* ── Environmental medium ── */
+      --water:           #2563eb;
+      --air:             #87ceeb;
+      --land:            #79cb67;
+
+      /* ── Map ── */
+      --map-bg:          #e8e8e8;
+      --radius-stroke:   #000000;
+      --radius-fill:     rgba(0, 0, 0, 0.04);
+
+      /* ── Shadows & overlays ── */
+      --shadow-sm:       rgba(0, 0, 0, 0.12);
+      --shadow-md:       rgba(0, 0, 0, 0.18);
+      --overlay:         rgba(0, 0, 0, 0.45);
+      --hover-bg:        rgba(0, 0, 0, 0.03);
+      --active-card-bg:  color-mix(in srgb, var(--accent) 8%, transparent);
+
+      /* ── Typography ── */
+      --serif:           'Source Serif 4', Georgia, 'Times New Roman', serif;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,7 +61,7 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--sans);
+      font-family: var(--serif);
       font-weight: 300;
       height: 100vh;
       display: flex;
@@ -56,11 +81,66 @@
       z-index: 1000;
     }
 
-    .wordmark { font-family: var(--mono); font-size: 14px; letter-spacing: 0.08em; color: var(--text-hi); }
-    .wordmark span { color: var(--spill); }
+    .wordmark { font-family: var(--serif); font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-hi); }
+    .wordmark span { color: var(--accent); }
 
-    .status-bar { font-family: var(--mono); font-size: 11px; color: var(--text-dim); display: flex; gap: 1.5rem; }
-    .live { color: #4caf50; }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+    .help-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-dim);
+      font-family: var(--serif);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .help-btn:hover,
+    .help-btn[aria-expanded="true"] {
+      border-color: var(--border-hi);
+      color: var(--text-hi);
+    }
+    .help-popover {
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 0;
+      width: min(340px, calc(100vw - 2rem));
+      padding: 1rem 1.1rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 24px var(--shadow-sm);
+      z-index: 1100;
+      display: none;
+    }
+    .help-popover.open { display: block; }
+    .help-popover-title {
+      font-family: var(--serif);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-hi);
+      margin-bottom: 0.5rem;
+    }
+    .help-popover p {
+      font-family: var(--serif);
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    .status-bar { font-family: var(--serif); font-size: 11px; color: var(--text-dim); display: flex; gap: 1.5rem; }
+    .live { color: var(--success); }
+    .status-error { color: var(--error); }
 
     .layout { display: flex; flex: 1; overflow: hidden; }
 
@@ -78,7 +158,7 @@
     .search-section { padding: 1.25rem; border-bottom: 1px solid var(--border); }
 
     .section-label {
-      font-family: var(--mono);
+      font-family: var(--serif);
       font-size: 10px;
       letter-spacing: 0.15em;
       color: var(--text-dim);
@@ -90,10 +170,10 @@
 
     input[type="text"] {
       flex: 1;
-      background: var(--bg);
+      background: var(--input-bg);
       border: 1px solid var(--border);
       color: var(--text-hi);
-      font-family: var(--sans);
+      font-family: var(--serif);
       font-size: 13px;
       font-weight: 400;
       padding: 8px 10px;
@@ -107,7 +187,7 @@
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text);
-      font-family: var(--mono);
+      font-family: var(--serif);
       font-size: 11px;
       letter-spacing: 0.05em;
       padding: 8px 12px;
@@ -115,21 +195,21 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .btn:hover { border-color: var(--spill); color: var(--spill); }
-    .btn-primary { border-color: var(--spill); color: var(--spill); }
-    .btn-primary:hover { background: var(--spill); color: var(--bg); }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary { border-color: var(--accent); color: var(--accent); }
+    .btn-primary:hover { background: var(--accent); color: var(--text-on-accent); }
 
     .radius-row { display: flex; align-items: center; gap: 10px; }
-    .radius-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-    input[type="range"] { flex: 1; accent-color: var(--spill); cursor: pointer; }
-    .radius-val { font-family: var(--mono); font-size: 12px; color: var(--text-hi); min-width: 48px; text-align: right; }
+    .radius-label { font-family: var(--serif); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .radius-val { font-family: var(--serif); font-size: 12px; color: var(--text-hi); min-width: 48px; text-align: right; }
 
     .filter-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
 
     .filter-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 0.5rem; }
 
     .chip {
-      font-family: var(--mono);
+      font-family: var(--serif);
       font-size: 10px;
       letter-spacing: 0.05em;
       padding: 4px 8px;
@@ -144,7 +224,17 @@
     }
     .chip:hover { border-color: var(--border-hi); color: var(--text); }
     .chip.active { border-color: currentColor; }
-    .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: block;
+      transition: transform 0.15s ease;
+      transform-origin: center;
+    }
+    #source-chips .chip:not(.chip-all):hover .chip-dot { transform: scale(1.75); }
+    #medium-chips .chip:not(.chip-all):hover .chip-dot { transform: scale(1.75); }
 
     /* type chip colors */
     .chip-spill    { color: var(--spill); }
@@ -152,9 +242,9 @@
     .chip-release  { color: var(--release); }
 
     /* source chip colors */
-    .chip-nrc  { color: #e0e0e0; }
-    .chip-echo { color: #80cbc4; }
-    .chip-tri  { color: #ce93d8; }
+    .chip-nrc  { color: var(--source-nrc); }
+    .chip-echo { color: var(--source-echo); }
+    .chip-tri  { color: var(--source-tri); }
     .chip-all  { color: var(--text); }
 
     /* medium chip colors */
@@ -171,7 +261,7 @@
       flex-shrink: 0;
     }
 
-    .results-count { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+    .results-count { font-family: var(--serif); font-size: 11px; color: var(--text-dim); }
     .results-count strong { color: var(--text-hi); font-weight: 400; }
 
     .results-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -183,13 +273,13 @@
       transition: background 0.1s;
       border-left: 2px solid transparent;
     }
-    .incident-card:hover { background: rgba(255,255,255,0.02); }
-    .incident-card.active { background: rgba(255,107,53,0.05); }
+    .incident-card:hover { background: var(--hover-bg); }
+    .incident-card.active { background: var(--active-card-bg); }
 
     .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
     .card-material { font-size: 13px; font-weight: 500; color: var(--text-hi); line-height: 1.3; }
     .card-type-badge {
-      font-family: var(--mono);
+      font-family: var(--serif);
       font-size: 9px;
       letter-spacing: 0.06em;
       padding: 2px 5px;
@@ -199,7 +289,7 @@
       margin-top: 1px;
     }
     .card-meta {
-      font-family: var(--mono);
+      font-family: var(--serif);
       font-size: 10px;
       color: var(--text-dim);
       display: flex;
@@ -211,22 +301,21 @@
     .card-party { font-size: 11px; color: var(--text-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .medium-tag {
-      font-family: var(--mono);
+      font-family: var(--serif);
       font-size: 9px;
       letter-spacing: 0.08em;
       padding: 2px 5px;
       border: 1px solid currentColor;
-      opacity: 0.7;
     }
 
     .state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 2rem; text-align: center; }
     .state-msg .icon { font-size: 32px; margin-bottom: 1rem; opacity: 0.3; }
-    .state-msg p { font-family: var(--mono); font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+    .state-msg p { font-family: var(--serif); font-size: 12px; color: var(--text-dim); line-height: 1.7; }
 
-    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--spill); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 1rem; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error-msg { padding: 0.75rem 1.25rem; font-family: var(--mono); font-size: 11px; color: #ef5350; border-bottom: 1px solid var(--border); display: none; }
+    .error-msg { padding: 0.75rem 1.25rem; font-family: var(--serif); font-size: 11px; color: var(--error); border-bottom: 1px solid var(--border); display: none; }
 
     /* ── LEGEND ── */
     .legend {
@@ -235,37 +324,196 @@
       flex-shrink: 0;
     }
     .legend-items { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
-    .legend-item { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--serif);
+      font-size: 10px;
+      color: var(--text-dim);
+      cursor: default;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: block;
+      transition: transform 0.15s ease;
+      transform-origin: center;
+    }
+    .legend-item:hover .legend-dot { transform: scale(1.6); }
 
     /* ── MAP ── */
-    #map { flex: 1; background: #0a0c0f; }
+    #map { flex: 1; background: var(--map-bg); }
 
     .leaflet-popup-content-wrapper {
       background: var(--panel);
-      border: 1px solid var(--border-hi);
+      border: 1px solid var(--border);
       border-radius: 0;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      box-shadow: 0 4px 16px var(--shadow-sm);
       color: var(--text);
-      font-family: var(--sans);
+      font-family: var(--serif);
       font-size: 13px;
     }
     .leaflet-popup-tip { background: var(--panel); }
     .leaflet-popup-close-button { color: var(--text-dim) !important; }
 
     .popup-material { font-weight: 500; font-size: 14px; color: var(--text-hi); margin-bottom: 6px; }
-    .popup-type { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border: 1px solid currentColor; display: inline-block; margin-bottom: 8px; }
-    .popup-row { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin: 3px 0; }
+    .popup-type { font-family: var(--serif); font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border: 1px solid currentColor; display: inline-block; margin-bottom: 8px; }
+    .popup-row { font-family: var(--serif); font-size: 11px; color: var(--text-dim); margin: 3px 0; }
     .popup-row span { color: var(--text); }
+    .popup-links {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .popup-link {
+      font-family: var(--serif);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: var(--site);
+      text-decoration: none;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .popup-link:hover { text-decoration: underline; }
 
-    .radius-circle { stroke: var(--spill); stroke-width: 1; stroke-dasharray: 4 4; fill: rgba(255, 107, 53, 0.04); }
-    .pin-svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+    .record-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .record-modal.open { display: flex; }
+    .record-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: var(--overlay);
+    }
+    .record-modal-panel {
+      position: relative;
+      width: min(640px, 100%);
+      max-height: min(80vh, 720px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .record-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .record-modal-title {
+      font-family: var(--serif);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-hi);
+    }
+    .record-modal-close {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--serif);
+      font-size: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .record-modal-close:hover { border-color: var(--border-hi); color: var(--text); }
+    .record-modal-body {
+      padding: 1rem 1.25rem;
+      overflow-y: auto;
+      font-family: var(--serif);
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .record-field { margin-bottom: 8px; }
+    .record-field-label { color: var(--text-dim); display: block; margin-bottom: 2px; }
+    .record-field-value { color: var(--text-hi); white-space: pre-wrap; word-break: break-word; }
+    .record-note {
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+    .record-note a { color: var(--site); }
+    .record-raw {
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+    .record-raw summary {
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .record-raw pre {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 10px;
+      color: var(--text);
+    }
+
+    .radius-circle { stroke: var(--radius-stroke); stroke-width: 1; stroke-dasharray: 4 4; fill: var(--radius-fill); }
+
+    /* Map markers — extra padding so hover scale isn't clipped */
+    .leaflet-div-icon {
+      overflow: visible !important;
+      background: transparent !important;
+      border: none !important;
+    }
+    .pin-wrap {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pin-svg svg {
+      display: block;
+      transition: transform 0.15s ease;
+      transform-origin: center;
+    }
+    .leaflet-marker-icon:hover .pin-svg svg { transform: scale(1.45); }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="wordmark">echo<span>Hazards</span></div>
+  <div class="header-left">
+    <div class="wordmark">echo<span>Hazards</span></div>
+    <button type="button" class="help-btn" id="help-btn" aria-label="How echoHazards works" aria-expanded="false" aria-controls="help-popover">?</button>
+    <div class="help-popover" id="help-popover" role="dialog" aria-labelledby="help-popover-title">
+      <div class="help-popover-title" id="help-popover-title">How it works</div>
+      <p>echoHazards combines federal environmental records from the NRC (spills), EPA ECHO (violations), and EPA TRI (chemical releases) into one searchable map. Enter an address or click the map, set a radius, and filter by source or medium to see nearby incidents. Click a marker for details and links to government reports where available.</p>
+    </div>
+  </div>
   <div class="status-bar">
     <span id="db-status">⬤ <span class="live">CONNECTING…</span></span>
     <span id="total-count">— incidents</span>
@@ -293,13 +541,13 @@
       <div class="filter-row" id="source-chips">
         <div class="chip chip-all active" data-source="" onclick="setFilter('source', '', this)">ALL</div>
         <div class="chip chip-nrc" data-source="NRC" onclick="setFilter('source', 'NRC', this)">
-          <span class="chip-dot" style="background:#e0e0e0"></span>NRC SPILLS
+          <span class="chip-dot" style="background:var(--source-nrc)"></span>NRC SPILLS
         </div>
         <div class="chip chip-echo" data-source="ECHO" onclick="setFilter('source', 'ECHO', this)">
-          <span class="chip-dot" style="background:#80cbc4"></span>ECHO VIOLATIONS
+          <span class="chip-dot" style="background:var(--source-echo)"></span>ECHO VIOLATIONS
         </div>
         <div class="chip chip-tri" data-source="TRI" onclick="setFilter('source', 'TRI', this)">
-          <span class="chip-dot" style="background:#ce93d8"></span>TRI RELEASES
+          <span class="chip-dot" style="background:var(--source-tri)"></span>TRI RELEASES
         </div>
       </div>
     </div>
@@ -334,17 +582,28 @@
     </div>
 
     <div class="legend">
-      <div class="section-label">Incident Type</div>
+      <div class="section-label">Data Source</div>
       <div class="legend-items">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--spill)"></div>Spill (NRC)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--violation)"></div>Violation (ECHO)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--release)"></div>Release (TRI)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--source-nrc)"></div>NRC Spills</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--source-echo)"></div>ECHO Violations</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--source-tri)"></div>TRI Releases</div>
       </div>
     </div>
 
   </aside>
 
   <div id="map"></div>
+</div>
+
+<div id="record-modal" class="record-modal" aria-hidden="true">
+  <div class="record-modal-backdrop" onclick="closeRecordModal()"></div>
+  <div class="record-modal-panel" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
+    <div class="record-modal-header">
+      <div class="record-modal-title" id="record-modal-title">Original Record</div>
+      <button type="button" class="record-modal-close" onclick="closeRecordModal()">CLOSE</button>
+    </div>
+    <div class="record-modal-body" id="record-modal-body"></div>
+  </div>
 </div>
 
 <script>
@@ -363,50 +622,220 @@ let activeCardId = null;
 let radiusCircle = null;
 let markers = {};
 
-// Colors by incident type
-const TYPE_COLORS = {
-  spill:     '#ff6b35',
-  violation: '#f7b731',
-  release:   '#a55eea',
-  site:      '#45aaf2',
-};
-
-function typeColor(type) {
-  return TYPE_COLORS[type] || '#4a5a6a';
+// Colors — read from :root CSS variables (single source of truth)
+function cssColor(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
 
-// Pin shapes by incident type
-// spill = circle, violation = diamond, release = triangle
-function makePinSvg(type) {
-  const color = typeColor(type);
-  let shape = '';
+function sourceColor(source) {
+  const vars = { NRC: '--source-nrc', ECHO: '--source-echo', TRI: '--source-tri' };
+  return cssColor(vars[source]) || cssColor('--unknown');
+}
 
-  if (type === 'spill') {
-    shape = `<path d="M10 0C4.477 0 0 4.477 0 10c0 7.5 10 16 10 16s10-8.5 10-16C20 4.477 15.523 0 10 0z" fill="${color}" fill-opacity="0.9"/>
-      <circle cx="10" cy="10" r="4" fill="#0a0c0f" fill-opacity="0.6"/>`;
-  } else if (type === 'violation') {
-    shape = `<path d="M10 0L20 10L10 20L0 10Z" fill="${color}" fill-opacity="0.9" transform="translate(0,-2)"/>
-      <circle cx="10" cy="8" r="3" fill="#0a0c0f" fill-opacity="0.6"/>`;
-  } else if (type === 'release') {
-    shape = `<path d="M10 0L20 20L0 20Z" fill="${color}" fill-opacity="0.9"/>
-      <circle cx="10" cy="14" r="3" fill="#0a0c0f" fill-opacity="0.6"/>`;
+function mediumColor(medium) {
+  const vars = { water: '--water', air: '--air', land: '--land' };
+  return vars[medium] ? cssColor(vars[medium]) : '';
+}
+
+function typeColor(type) {
+  const vars = { spill: '--spill', violation: '--violation', release: '--release', site: '--site' };
+  return cssColor(vars[type]) || cssColor('--unknown');
+}
+
+const SOURCE_LABELS = {
+  NRC:  'NRC Spills',
+  ECHO: 'ECHO Violations',
+  TRI:  'TRI Releases',
+};
+
+function sourceLabel(source) {
+  return SOURCE_LABELS[source] || source || '—';
+}
+
+function governmentPortalUrl(source, sourceId) {
+  if (!sourceId) return null;
+  switch (source) {
+    case 'ECHO':
+      return `https://echo.epa.gov/detailed-facility-report?fid=${encodeURIComponent(String(sourceId).trim())}`;
+    case 'TRI': {
+      const trifd = String(sourceId).split('_')[0].trim();
+      if (!trifd) return null;
+      return `https://enviro.epa.gov/enviro/tris_control_v2.tris_print?pPrev=1&tris_id=${encodeURIComponent(trifd)}`;
+    }
+    default:
+      return null;
+  }
+}
+
+function governmentPortalLabel(source) {
+  switch (source) {
+    case 'ECHO': return 'View EPA ECHO facility report';
+    case 'TRI': return 'View EPA TRI facility report';
+    default: return 'View government report';
+  }
+}
+
+const NRC_RAW_FIELDS = [
+  ['SEQNOS', 'NRC incident number'],
+  ['MAT_NAME_OF_MATERIAL', 'Material'],
+  ['MAT_AMOUNT_OF_MATERIAL', 'Amount'],
+  ['MAT_UNIT_OF_MEASURE', 'Unit'],
+  ['COMMON_INCIDENT_DATE_TIME', 'Incident date/time'],
+  ['CALL_RESPONSIBLE_COMPANY', 'Responsible company'],
+  ['COMMON_INCIDENT_LOCATION', 'Incident location'],
+  ['COMMON_LOCATION_STREET1', 'Street'],
+  ['COMMON_LOCATION_NEAREST_CITY', 'City'],
+  ['COMMON_LOCATION_STATE', 'State'],
+  ['COMMON_LOCATION_ZIP', 'ZIP'],
+  ['COMMON_INCIDENT_CAUSE', 'Cause'],
+  ['COMMON_INCIDENT_NATURE', 'Nature'],
+];
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function popupSourceLinks(inc) {
+  const parts = [];
+  if (inc.source === 'NRC') {
+    parts.push(`<button type="button" class="popup-link popup-action" data-action="raw" data-incident-id="${inc.id}">View original NRC record</button>`);
   } else {
-    shape = `<rect x="2" y="2" width="16" height="16" fill="${color}" fill-opacity="0.9"/>
-      <circle cx="10" cy="10" r="3" fill="#0a0c0f" fill-opacity="0.6"/>`;
+    const govUrl = governmentPortalUrl(inc.source, inc.source_id);
+    if (govUrl) {
+      parts.push(`<button type="button" class="popup-link popup-action" data-action="external" data-report-url="${escapeHtml(govUrl)}">${governmentPortalLabel(inc.source)}</button>`);
+    }
+  }
+  if (!parts.length) return '';
+  return `<div class="popup-links">${parts.join('')}</div>`;
+}
+
+function bindPopupActions(popupEl) {
+  if (!popupEl) return;
+  popupEl.querySelectorAll('.popup-action').forEach((btn) => {
+    btn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const action = btn.dataset.action;
+      if (action === 'external' && btn.dataset.reportUrl) {
+        window.open(btn.dataset.reportUrl, '_blank', 'noopener,noreferrer');
+      } else if (action === 'raw' && btn.dataset.incidentId) {
+        showRawRecord(btn.dataset.incidentId);
+      }
+    }, { once: true });
+  });
+}
+
+function renderNrcRecord(data) {
+  const raw = data.raw || {};
+  const fields = NRC_RAW_FIELDS
+    .filter(([key]) => raw[key])
+    .map(([key, label]) => `
+      <div class="record-field">
+        <span class="record-field-label">${label}</span>
+        <span class="record-field-value">${escapeHtml(raw[key])}</span>
+      </div>`)
+    .join('');
+
+  return `
+    ${fields || '<div class="record-field"><span class="record-field-value">No NRC fields available.</span></div>'}
+    <div class="record-note">
+      NRC does not publish individual spill pages online. This record is the original data saved from the
+      <a href="https://nrc.uscg.mil/FOIAdata.aspx" target="_blank" rel="noopener noreferrer">NRC FOIA spreadsheet release</a>
+      (incident SEQNOS ${escapeHtml(data.source_id || raw.SEQNOS || '—')}).
+    </div>
+    <details class="record-raw">
+      <summary>Full original record (JSON)</summary>
+      <pre>${escapeHtml(JSON.stringify(raw, null, 2))}</pre>
+    </details>`;
+}
+
+function closeRecordModal() {
+  const modal = document.getElementById('record-modal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.getElementById('record-modal-body').innerHTML = '';
+}
+
+async function showRawRecord(id) {
+  const modal = document.getElementById('record-modal');
+  const body = document.getElementById('record-modal-body');
+  const title = document.getElementById('record-modal-title');
+
+  title.textContent = 'Loading original record…';
+  body.innerHTML = '<div class="record-field"><span class="record-field-value">Loading…</span></div>';
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+
+  try {
+    const res = await fetch(`${API_BASE}/incidents/${id}`);
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const data = await res.json();
+    title.textContent = `${sourceLabel(data.source)} · Original Record`;
+    body.innerHTML = data.source === 'NRC'
+      ? renderNrcRecord(data)
+      : `<div class="record-note">Original ${escapeHtml(data.source)} record from the federal source database.</div>
+         <details class="record-raw" open>
+           <summary>Full original record (JSON)</summary>
+           <pre>${escapeHtml(JSON.stringify(data.raw || {}, null, 2))}</pre>
+         </details>`;
+  } catch (e) {
+    title.textContent = 'Original Record';
+    body.innerHTML = '<div class="record-field"><span class="record-field-value">Could not load the original record. Make sure the API is running.</span></div>';
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeRecordModal();
+    closeHelpPopover();
+  }
+});
+
+(function initHelpPopover() {
+  const btn = document.getElementById('help-btn');
+  const popover = document.getElementById('help-popover');
+  if (!btn || !popover) return;
+
+  function closeHelpPopover() {
+    popover.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
   }
 
+  window.closeHelpPopover = closeHelpPopover;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = popover.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!popover.classList.contains('open')) return;
+    if (btn.contains(e.target) || popover.contains(e.target)) return;
+    closeHelpPopover();
+  });
+})();
+
+function makePinSvg(source) {
+  const color = sourceColor(source);
+  const shape = `<circle cx="10" cy="10" r="7" fill="${color}"/>`;
+
   return L.divIcon({
-    html: `<div class="pin-svg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 20 22">${shape}</svg></div>`,
-    iconSize: [20, 22],
-    iconAnchor: [10, 22],
-    popupAnchor: [0, -24],
+    html: `<div class="pin-wrap"><div class="pin-svg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">${shape}</svg></div></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
     className: '',
   });
 }
 
 // Map init
 const map = L.map('map', { center: [39.5, -98.35], zoom: 4 });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '© <a href="https://carto.com/">CARTO</a> | NRC / EPA ECHO / EPA TRI',
   subdomains: 'abcd',
   maxZoom: 19,
@@ -428,13 +857,13 @@ async function checkStatus() {
     document.getElementById('db-status').innerHTML =
       data.status === 'ok'
         ? '⬤ <span class="live">API CONNECTED</span>'
-        : '⬤ <span style="color:#ef5350">API DEGRADED</span>';
+        : '⬤ <span class="status-error">API DEGRADED</span>';
     const pipeline = await fetch(`${API_BASE}/pipeline/status`);
     const pd = await pipeline.json();
     document.getElementById('total-count').textContent =
       pd.total_incidents.toLocaleString() + ' incidents';
   } catch(e) {
-    document.getElementById('db-status').innerHTML = '⬤ <span style="color:#ef5350">API OFFLINE</span>';
+    document.getElementById('db-status').innerHTML = '⬤ <span class="status-error">API OFFLINE</span>';
   }
 }
 
@@ -495,7 +924,8 @@ function renderResults(total, items) {
   }
 
   list.innerHTML = items.map(inc => {
-    const color = typeColor(inc.incident_type);
+    const srcColor = sourceColor(inc.source);
+    const medColor = mediumColor(inc.medium);
     const material = inc.material ? inc.material.substring(0, 80) + (inc.material.length > 80 ? '…' : '') : 'Unknown';
     const date = inc.incident_date || '—';
     const loc = [inc.city, inc.state].filter(Boolean).join(', ') || inc.state || '—';
@@ -503,23 +933,20 @@ function renderResults(total, items) {
       ? `${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}`.trim()
       : null;
 
-    const mediumColor = { water: 'var(--water)', air: 'var(--air)', land: 'var(--land)' }[inc.medium] || '';
-
     return `<div class="incident-card" id="card-${inc.id}"
-        style="border-left-color: ${color}"
+        style="border-left-color: ${srcColor}"
         onclick="focusIncident('${inc.id}', ${inc.lat}, ${inc.lng})">
       <div class="card-top">
         <div class="card-material">${material}</div>
-        <div class="card-type-badge" style="color:${color}">${inc.incident_type.toUpperCase()}</div>
+        <div class="card-type-badge" style="color:${srcColor}">${inc.incident_type.toUpperCase()}</div>
       </div>
       ${inc.responsible_party ? `<div class="card-party">${inc.responsible_party}</div>` : ''}
       <div class="card-meta">
         <span>${date}</span>
         <span>${loc}</span>
         ${qty ? `<span>${qty}</span>` : ''}
-        ${inc.source ? `<span style="opacity:0.6">${inc.source}</span>` : ''}
-        ${inc.medium && inc.medium !== 'unknown'
-          ? `<span class="medium-tag" style="color:${mediumColor}">${inc.medium.toUpperCase()}</span>`
+        ${inc.medium && inc.medium !== 'unknown' && medColor
+          ? `<span class="medium-tag" style="color:${medColor}">${inc.medium.toUpperCase()}</span>`
           : ''}
       </div>
     </div>`;
@@ -535,24 +962,31 @@ function clearMarkers() {
 function renderMarkers(items) {
   clearMarkers();
   items.forEach(inc => {
-    const marker = L.marker([inc.lat, inc.lng], { icon: makePinSvg(inc.incident_type) });
-    const color = typeColor(inc.incident_type);
+    const marker = L.marker([inc.lat, inc.lng], { icon: makePinSvg(inc.source) });
+    const srcColor = sourceColor(inc.source);
     const material = inc.material ? inc.material.substring(0, 120) + (inc.material.length > 120 ? '…' : '') : 'Unknown';
     const qty = inc.quantity && inc.quantity > 0
       ? `<div class="popup-row">QUANTITY <span>${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}</span></div>` : '';
     const party = inc.responsible_party
       ? `<div class="popup-row">RESPONSIBLE <span>${inc.responsible_party}</span></div>` : '';
-    const medium = inc.medium && inc.medium !== 'unknown'
-      ? `<div class="popup-row">MEDIUM <span>${inc.medium.toUpperCase()}</span></div>` : '';
+    const medium = inc.medium && inc.medium !== 'unknown' && mediumColor(inc.medium)
+      ? `<div class="popup-row">MEDIUM <span style="color:${mediumColor(inc.medium)}">${inc.medium.toUpperCase()}</span></div>` : '';
 
     marker.bindPopup(`
       <div class="popup-material">${material}</div>
-      <div class="popup-type" style="color:${color}">${inc.incident_type.toUpperCase()} · ${inc.source}</div>
+      <div class="popup-type" style="color:${srcColor}">${inc.incident_type.toUpperCase()} · ${sourceLabel(inc.source)}</div>
       <div class="popup-row">DATE <span>${inc.incident_date || '—'}</span></div>
       <div class="popup-row">LOCATION <span>${[inc.city, inc.state].filter(Boolean).join(', ') || '—'}</span></div>
       ${qty}${party}${medium}
+      ${popupSourceLinks(inc)}
     `, { maxWidth: 280 });
 
+    marker.on('popupopen', (e) => {
+      const el = e.popup.getElement();
+      if (!el) return;
+      el.addEventListener('click', (ev) => ev.stopPropagation(), { once: true });
+      bindPopupActions(el);
+    });
     marker.on('click', () => { setActiveCard(inc.id); scrollToCard(inc.id); });
     marker.addTo(map);
     markers[inc.id] = marker;
@@ -613,7 +1047,7 @@ function showLoading() {
   document.getElementById('results-count').innerHTML = 'Searching…';
   document.getElementById('results-list').innerHTML = `<div class="state-msg">
     <div class="spinner"></div>
-    <p style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">Querying database…</p></div>`;
+    <p style="font-family:var(--serif);font-size:11px;color:var(--text-dim)">Querying database…</p></div>`;
 }
 
 function showError(msg) {
