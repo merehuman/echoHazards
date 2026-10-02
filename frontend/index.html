@@ -7,6 +7,9 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 
@@ -41,7 +44,7 @@
       --land:            #79cb67;
 
       /* ── Map ── */
-      --map-bg:          #e8e8e8;
+      --map-bg:          #f2f3f0;
       --radius-stroke:   #000000;
       --radius-fill:     rgba(0, 0, 0, 0.04);
 
@@ -346,6 +349,8 @@
 
     /* ── MAP ── */
     #map { flex: 1; background: var(--map-bg); }
+    /* Basemap is drawn by MapLibre under Leaflet. Let clicks reach the Leaflet map. */
+    .leaflet-gl-layer { pointer-events: none; }
 
     .leaflet-popup-content-wrapper {
       background: var(--panel);
@@ -833,13 +838,17 @@ function makePinSvg(source) {
   });
 }
 
-// Map init
-const map = L.map('map', { center: [39.5, -98.35], zoom: 4 });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© <a href="https://carto.com/">CARTO</a> | NRC / EPA ECHO / EPA TRI',
-  subdomains: 'abcd',
-  maxZoom: 19,
+// Map init. CARTO raster tiles now watermark every tile without an API key.
+// OpenFreeMap Positron is the same light basemap, served as vector tiles with no key.
+// Zoom animation is off so the vector layer stays aligned with Leaflet markers.
+const map = L.map('map', { center: [39.5, -98.35], zoom: 4, zoomAnimation: false });
+L.maplibreGL({
+  style: 'https://tiles.openfreemap.org/styles/positron',
+  attributionControl: false,
 }).addTo(map);
+map.attributionControl.addAttribution(
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://openfreemap.org">OpenFreeMap</a> | NRC / EPA ECHO / EPA TRI'
+);
 
 map.on('click', function(e) {
   currentLat = e.latlng.lat;
