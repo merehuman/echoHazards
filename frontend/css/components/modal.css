@@ -1,0 +1,94 @@
+.record-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.record-modal.open { display: flex; }
+.record-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+}
+.record-modal-panel {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: min(80vh, 720px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.record-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.record-modal-title {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-hi);
+}
+.record-modal-close {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--serif);
+  font-size: 10px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.record-modal-close:hover { border-color: var(--border-hi); color: var(--text); }
+.record-modal-body {
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+  font-family: var(--serif);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.record-field { margin-bottom: 8px; }
+.record-field-label { color: var(--text-dim); display: block; margin-bottom: 2px; }
+.record-field-value { color: var(--text-hi); white-space: pre-wrap; word-break: break-word; }
+.record-note {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.record-note a { color: var(--link); }
+.record-raw {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.record-raw summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.record-raw pre {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 10px;
+  color: var(--text);
+}

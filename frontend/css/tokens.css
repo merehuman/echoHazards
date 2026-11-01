@@ -1,0 +1,54 @@
+:root {
+  /* ── UI base ── */
+  --bg:              #ffffff;
+  --panel:           #ffffff;
+  --input-bg:        #ffffff;
+  --border:          #e2e5ea;
+  --border-hi:       #c5cad3;
+  --text:            #3d4654;
+  --text-dim:        #909db0;
+  --text-hi:         #8b8b8b;
+  --text-on-accent:  #ffffff;
+
+  /* ── Status ── */
+  --success:         #4caf50;
+  --error:           #ef5350;
+
+  /* ── Accent (buttons, wordmark highlight, links) ── */
+  --accent:          #454545;
+  --link:            var(--accent);
+
+  /* ── Data sources (map markers, list badges, chips) ── */
+  --source-nrc:      #d50000;
+  --source-echo:     #562424;
+  --source-tri:      rgb(255, 115, 0);
+  --unknown:         #909db0;
+
+  /* ── Environmental medium ── */
+  --water:           #2563eb;
+  --air:             #87ceeb;
+  --land:            #79cb67;
+
+  /* ── Map ── */
+  --map-bg:          #f2f3f0;
+  --radius-stroke:   #000000;
+  --radius-fill:     rgba(0, 0, 0, 0.04);
+
+  /* ── Shadows & overlays ── */
+  --shadow-sm:       rgba(0, 0, 0, 0.12);
+  --shadow-md:       rgba(0, 0, 0, 0.18);
+  --overlay:         rgba(0, 0, 0, 0.45);
+  --hover-bg:        rgba(0, 0, 0, 0.03);
+  --active-card-bg:  color-mix(in srgb, var(--accent) 8%, transparent);
+
+  /* ── Typography ── */
+  --serif:           'Source Serif 4', Georgia, 'Times New Roman', serif;
+}
+
+/* ── Tones: set --tone from a source or medium; components decide where to apply it ── */
+.tone-nrc   { --tone: var(--source-nrc); }
+.tone-echo  { --tone: var(--source-echo); }
+.tone-tri   { --tone: var(--source-tri); }
+.tone-water { --tone: var(--water); }
+.tone-air   { --tone: var(--air); }
+.tone-land  { --tone: var(--land); }

@@ -1,0 +1,39 @@
+.chip {
+  font-family: var(--serif);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.chip:hover { border-color: var(--border-hi); color: var(--text); }
+.chip.active { border-color: currentColor; }
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: block;
+  background: var(--tone);
+  transition: transform 0.15s ease;
+  transform-origin: center;
+}
+#source-chips .chip:not(.chip-all):hover .chip-dot { transform: scale(1.75); }
+#medium-chips .chip:not(.chip-all):hover .chip-dot { transform: scale(1.75); }
+
+/* source chip colors */
+.chip-nrc  { color: var(--source-nrc); }
+.chip-echo { color: var(--source-echo); }
+.chip-tri  { color: var(--source-tri); }
+.chip-all  { color: var(--text); }
+
+/* medium chip colors */
+.chip-water { color: var(--water); }
+.chip-air   { color: var(--air); }
+.chip-land  { color: var(--land); }

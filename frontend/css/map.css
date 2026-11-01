@@ -1,0 +1,65 @@
+/* Basemap is drawn by MapLibre under Leaflet. Let clicks reach the Leaflet map. */
+.leaflet-gl-layer { pointer-events: none; }
+
+/* ── Popups ── */
+.leaflet-popup-content-wrapper {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: 0 4px 16px var(--shadow-sm);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 13px;
+}
+.leaflet-popup-tip { background: var(--panel); }
+.leaflet-popup-close-button { color: var(--text-dim) !important; }
+
+.popup-material { font-weight: 500; font-size: 14px; color: var(--text-hi); margin-bottom: 6px; }
+.popup-type { font-family: var(--serif); font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border: 1px solid currentColor; color: var(--tone, var(--unknown)); display: inline-block; margin-bottom: 8px; }
+.popup-row { font-family: var(--serif); font-size: 11px; color: var(--text-dim); margin: 3px 0; }
+.popup-row span { color: var(--text); }
+.popup-row .popup-medium { color: var(--tone); }
+.popup-links {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.popup-link {
+  font-family: var(--serif);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--link);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.popup-link:hover { text-decoration: underline; }
+
+/* ── Search radius ── */
+.radius-circle { stroke: var(--radius-stroke); stroke-width: 1; stroke-dasharray: 4 4; fill: var(--radius-fill); }
+
+/* ── Markers: extra padding so hover scale isn't clipped ── */
+.leaflet-div-icon {
+  overflow: visible !important;
+  background: transparent !important;
+  border: none !important;
+}
+.pin-wrap {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-svg svg {
+  display: block;
+  transition: transform 0.15s ease;
+  transform-origin: center;
+}
+.leaflet-marker-icon:hover .pin-svg svg { transform: scale(1.45); }

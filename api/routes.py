@@ -13,8 +13,9 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID
-from sqlalchemy import func, text
+from geoalchemy2 import Geography
+from geoalchemy2.functions import ST_Distance, ST_DWithin, ST_MakePoint, ST_SetSRID
+from sqlalchemy import cast, func, text
 from sqlalchemy.orm import Session
 
 from models.database import get_db
@@ -70,11 +71,12 @@ def list_incidents(
       GET /incidents?lat=37.77&lng=-122.41&radius_km=10&source=NRC&since=2020-01-01
     """
     q = db.query(Incident)
+    point = None
 
     # Proximity filter
     if lat is not None and lng is not None:
         # ST_DWithin on Geography uses meters
-        point = ST_SetSRID(ST_MakePoint(lng, lat), 4326)
+        point = cast(ST_SetSRID(ST_MakePoint(lng, lat), 4326), Geography)
         q = q.filter(ST_DWithin(Incident.location, point, radius_km * 1000))
     elif lat is not None or lng is not None:
         raise HTTPException(
@@ -112,12 +114,16 @@ def list_incidents(
 
     total = q.count()
 
-    # Sort: by distance if proximity search, else by date
-    if lat is not None:
-        point = ST_SetSRID(ST_MakePoint(lng, lat), 4326)
-        q = q.order_by(ST_DWithin(Incident.location, point, radius_km * 1000))
+    # Sort: by distance if proximity search, else by date.
+    # Incident.id is a unique tie-breaker so offset pagination is deterministic.
+    if point is not None:
+        q = q.order_by(ST_Distance(Incident.location, point), Incident.id)
     else:
-        q = q.order_by(Incident.incident_date.desc().nullslast(), Incident.ingested_at.desc())
+        q = q.order_by(
+            Incident.incident_date.desc().nullslast(),
+            Incident.ingested_at.desc(),
+            Incident.id,
+        )
 
     # Paginate
     offset = (page - 1) * page_size

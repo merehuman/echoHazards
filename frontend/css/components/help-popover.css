@@ -1,0 +1,48 @@
+.help-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.help-btn:hover,
+.help-btn[aria-expanded="true"] {
+  border-color: var(--border-hi);
+  color: var(--text-hi);
+}
+
+.help-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: min(340px, calc(100vw - 2rem));
+  padding: 1rem 1.1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px var(--shadow-sm);
+  z-index: 1100;
+  display: none;
+}
+.help-popover.open { display: block; }
+.help-popover-title {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-hi);
+  margin-bottom: 0.5rem;
+}
+.help-popover p {
+  font-family: var(--serif);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+}

@@ -11,502 +11,17 @@
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 
-  <style>
-    :root {
-      /* ── UI base ── */
-      --bg:              #ffffff;
-      --panel:           #ffffff;
-      --input-bg:        #ffffff;
-      --border:          #e2e5ea;
-      --border-hi:       #c5cad3;
-      --text:            #3d4654;
-      --text-dim:        #909db0;
-      --text-hi:         #8b8b8b;
-      --text-on-accent:  #ffffff;
-
-      /* ── Status ── */
-      --success:         #4caf50;
-      --error:           #ef5350;
-
-      /* ── Accent (buttons, wordmark highlight, links) ── */
-      --accent:          #454545;
-
-      /* ── Data sources (map markers, list badges, chips) ── */
-      --source-nrc:      #d50000;
-      --source-echo:     #562424;
-      --source-tri:      rgb(255, 115, 0);
-
-      /* ── Environmental medium ── */
-      --water:           #2563eb;
-      --air:             #87ceeb;
-      --land:            #79cb67;
-
-      /* ── Map ── */
-      --map-bg:          #f2f3f0;
-      --radius-stroke:   #000000;
-      --radius-fill:     rgba(0, 0, 0, 0.04);
-
-      /* ── Shadows & overlays ── */
-      --shadow-sm:       rgba(0, 0, 0, 0.12);
-      --shadow-md:       rgba(0, 0, 0, 0.18);
-      --overlay:         rgba(0, 0, 0, 0.45);
-      --hover-bg:        rgba(0, 0, 0, 0.03);
-      --active-card-bg:  color-mix(in srgb, var(--accent) 8%, transparent);
-
-      /* ── Typography ── */
-      --serif:           'Source Serif 4', Georgia, 'Times New Roman', serif;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--serif);
-      font-weight: 300;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1.5rem;
-      height: 48px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-      z-index: 1000;
-    }
-
-    .wordmark { font-family: var(--serif); font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-hi); }
-    .wordmark span { color: var(--accent); }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      position: relative;
-    }
-    .help-btn {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      color: var(--text-dim);
-      font-family: var(--serif);
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1;
-      padding: 0;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .help-btn:hover,
-    .help-btn[aria-expanded="true"] {
-      border-color: var(--border-hi);
-      color: var(--text-hi);
-    }
-    .help-popover {
-      position: absolute;
-      top: calc(100% + 10px);
-      left: 0;
-      width: min(340px, calc(100vw - 2rem));
-      padding: 1rem 1.1rem;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 24px var(--shadow-sm);
-      z-index: 1100;
-      display: none;
-    }
-    .help-popover.open { display: block; }
-    .help-popover-title {
-      font-family: var(--serif);
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-hi);
-      margin-bottom: 0.5rem;
-    }
-    .help-popover p {
-      font-family: var(--serif);
-      font-size: 12px;
-      line-height: 1.55;
-      color: var(--text);
-    }
-
-    .status-bar { font-family: var(--serif); font-size: 11px; color: var(--text-dim); display: flex; gap: 1.5rem; }
-    .live { color: var(--success); }
-    .status-error { color: var(--error); }
-
-    .layout { display: flex; flex: 1; overflow: hidden; }
-
-    /* ── SIDEBAR ── */
-    .sidebar {
-      width: 340px;
-      flex-shrink: 0;
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .search-section { padding: 1.25rem; border-bottom: 1px solid var(--border); }
-
-    .section-label {
-      font-family: var(--serif);
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      margin-bottom: 0.75rem;
-    }
-
-    .search-row { display: flex; gap: 6px; margin-bottom: 8px; }
-
-    input[type="text"] {
-      flex: 1;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      color: var(--text-hi);
-      font-family: var(--serif);
-      font-size: 13px;
-      font-weight: 400;
-      padding: 8px 10px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    input[type="text"]:focus { border-color: var(--border-hi); }
-    input[type="text"]::placeholder { color: var(--text-dim); }
-
-    .btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: var(--serif);
-      font-size: 11px;
-      letter-spacing: 0.05em;
-      padding: 8px 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-    .btn:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-primary { border-color: var(--accent); color: var(--accent); }
-    .btn-primary:hover { background: var(--accent); color: var(--text-on-accent); }
-
-    .radius-row { display: flex; align-items: center; gap: 10px; }
-    .radius-label { font-family: var(--serif); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-    input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-    .radius-val { font-family: var(--serif); font-size: 12px; color: var(--text-hi); min-width: 48px; text-align: right; }
-
-    .filter-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
-
-    .filter-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 0.5rem; }
-
-    .chip {
-      font-family: var(--serif);
-      font-size: 10px;
-      letter-spacing: 0.05em;
-      padding: 4px 8px;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      cursor: pointer;
-      transition: all 0.12s;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .chip:hover { border-color: var(--border-hi); color: var(--text); }
-    .chip.active { border-color: currentColor; }
-    .chip-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      display: block;
-      transition: transform 0.15s ease;
-      transform-origin: center;
-    }
-    #source-chips .chip:not(.chip-all):hover .chip-dot { transform: scale(1.75); }
-    #medium-chips .chip:not(.chip-all):hover .chip-dot { transform: scale(1.75); }
-
-    /* type chip colors */
-    .chip-spill    { color: var(--spill); }
-    .chip-violation{ color: var(--violation); }
-    .chip-release  { color: var(--release); }
-
-    /* source chip colors */
-    .chip-nrc  { color: var(--source-nrc); }
-    .chip-echo { color: var(--source-echo); }
-    .chip-tri  { color: var(--source-tri); }
-    .chip-all  { color: var(--text); }
-
-    /* medium chip colors */
-    .chip-water { color: var(--water); }
-    .chip-air   { color: var(--air); }
-    .chip-land  { color: var(--land); }
-
-    .results-header {
-      padding: 0.75rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-
-    .results-count { font-family: var(--serif); font-size: 11px; color: var(--text-dim); }
-    .results-count strong { color: var(--text-hi); font-weight: 400; }
-
-    .results-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-
-    .incident-card {
-      padding: 0.9rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.1s;
-      border-left: 2px solid transparent;
-    }
-    .incident-card:hover { background: var(--hover-bg); }
-    .incident-card.active { background: var(--active-card-bg); }
-
-    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-    .card-material { font-size: 13px; font-weight: 500; color: var(--text-hi); line-height: 1.3; }
-    .card-type-badge {
-      font-family: var(--serif);
-      font-size: 9px;
-      letter-spacing: 0.06em;
-      padding: 2px 5px;
-      border: 1px solid currentColor;
-      white-space: nowrap;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-    .card-meta {
-      font-family: var(--serif);
-      font-size: 10px;
-      color: var(--text-dim);
-      display: flex;
-      gap: 10px;
-      margin-top: 5px;
-      flex-wrap: wrap;
-    }
-    .card-meta span { white-space: nowrap; }
-    .card-party { font-size: 11px; color: var(--text-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .medium-tag {
-      font-family: var(--serif);
-      font-size: 9px;
-      letter-spacing: 0.08em;
-      padding: 2px 5px;
-      border: 1px solid currentColor;
-    }
-
-    .state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 2rem; text-align: center; }
-    .state-msg .icon { font-size: 32px; margin-bottom: 1rem; opacity: 0.3; }
-    .state-msg p { font-family: var(--serif); font-size: 12px; color: var(--text-dim); line-height: 1.7; }
-
-    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 1rem; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .error-msg { padding: 0.75rem 1.25rem; font-family: var(--serif); font-size: 11px; color: var(--error); border-bottom: 1px solid var(--border); display: none; }
-
-    /* ── LEGEND ── */
-    .legend {
-      padding: 0.75rem 1.25rem;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .legend-items { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-family: var(--serif);
-      font-size: 10px;
-      color: var(--text-dim);
-      cursor: default;
-    }
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      display: block;
-      transition: transform 0.15s ease;
-      transform-origin: center;
-    }
-    .legend-item:hover .legend-dot { transform: scale(1.6); }
-
-    /* ── MAP ── */
-    #map { flex: 1; background: var(--map-bg); }
-    /* Basemap is drawn by MapLibre under Leaflet. Let clicks reach the Leaflet map. */
-    .leaflet-gl-layer { pointer-events: none; }
-
-    .leaflet-popup-content-wrapper {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 0;
-      box-shadow: 0 4px 16px var(--shadow-sm);
-      color: var(--text);
-      font-family: var(--serif);
-      font-size: 13px;
-    }
-    .leaflet-popup-tip { background: var(--panel); }
-    .leaflet-popup-close-button { color: var(--text-dim) !important; }
-
-    .popup-material { font-weight: 500; font-size: 14px; color: var(--text-hi); margin-bottom: 6px; }
-    .popup-type { font-family: var(--serif); font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border: 1px solid currentColor; display: inline-block; margin-bottom: 8px; }
-    .popup-row { font-family: var(--serif); font-size: 11px; color: var(--text-dim); margin: 3px 0; }
-    .popup-row span { color: var(--text); }
-    .popup-links {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .popup-link {
-      font-family: var(--serif);
-      font-size: 10px;
-      letter-spacing: 0.04em;
-      color: var(--site);
-      text-decoration: none;
-      background: none;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-      text-align: left;
-    }
-    .popup-link:hover { text-decoration: underline; }
-
-    .record-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 2000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-    }
-    .record-modal.open { display: flex; }
-    .record-modal-backdrop {
-      position: absolute;
-      inset: 0;
-      background: var(--overlay);
-    }
-    .record-modal-panel {
-      position: relative;
-      width: min(640px, 100%);
-      max-height: min(80vh, 720px);
-      background: var(--panel);
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 32px var(--shadow-md);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .record-modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .record-modal-title {
-      font-family: var(--serif);
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-hi);
-    }
-    .record-modal-close {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      font-family: var(--serif);
-      font-size: 10px;
-      padding: 4px 8px;
-      cursor: pointer;
-    }
-    .record-modal-close:hover { border-color: var(--border-hi); color: var(--text); }
-    .record-modal-body {
-      padding: 1rem 1.25rem;
-      overflow-y: auto;
-      font-family: var(--serif);
-      font-size: 11px;
-      line-height: 1.6;
-      color: var(--text);
-    }
-    .record-field { margin-bottom: 8px; }
-    .record-field-label { color: var(--text-dim); display: block; margin-bottom: 2px; }
-    .record-field-value { color: var(--text-hi); white-space: pre-wrap; word-break: break-word; }
-    .record-note {
-      margin-top: 1rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 10px;
-      line-height: 1.5;
-    }
-    .record-note a { color: var(--site); }
-    .record-raw {
-      margin-top: 1rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border);
-    }
-    .record-raw summary {
-      cursor: pointer;
-      color: var(--text-dim);
-      font-size: 10px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    .record-raw pre {
-      margin-top: 0.75rem;
-      padding: 0.75rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 10px;
-      color: var(--text);
-    }
-
-    .radius-circle { stroke: var(--radius-stroke); stroke-width: 1; stroke-dasharray: 4 4; fill: var(--radius-fill); }
-
-    /* Map markers — extra padding so hover scale isn't clipped */
-    .leaflet-div-icon {
-      overflow: visible !important;
-      background: transparent !important;
-      border: none !important;
-    }
-    .pin-wrap {
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pin-svg svg {
-      display: block;
-      transition: transform 0.15s ease;
-      transform-origin: center;
-    }
-    .leaflet-marker-icon:hover .pin-svg svg { transform: scale(1.45); }
-  </style>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components/help-popover.css">
+  <link rel="stylesheet" href="css/components/chips.css">
+  <link rel="stylesheet" href="css/components/incident-card.css">
+  <link rel="stylesheet" href="css/components/states.css">
+  <link rel="stylesheet" href="css/components/modal.css">
+  <link rel="stylesheet" href="css/map.css">
 </head>
 <body>
 
@@ -546,13 +61,13 @@
       <div class="filter-row" id="source-chips">
         <div class="chip chip-all active" data-source="" onclick="setFilter('source', '', this)">ALL</div>
         <div class="chip chip-nrc" data-source="NRC" onclick="setFilter('source', 'NRC', this)">
-          <span class="chip-dot" style="background:var(--source-nrc)"></span>NRC SPILLS
+          <span class="chip-dot tone-nrc"></span>NRC SPILLS
         </div>
         <div class="chip chip-echo" data-source="ECHO" onclick="setFilter('source', 'ECHO', this)">
-          <span class="chip-dot" style="background:var(--source-echo)"></span>ECHO VIOLATIONS
+          <span class="chip-dot tone-echo"></span>ECHO VIOLATIONS
         </div>
         <div class="chip chip-tri" data-source="TRI" onclick="setFilter('source', 'TRI', this)">
-          <span class="chip-dot" style="background:var(--source-tri)"></span>TRI RELEASES
+          <span class="chip-dot tone-tri"></span>TRI RELEASES
         </div>
       </div>
     </div>
@@ -562,13 +77,13 @@
       <div class="filter-row" id="medium-chips">
         <div class="chip chip-all active" data-medium="" onclick="setFilter('medium', '', this)">ALL</div>
         <div class="chip chip-water" data-medium="water" onclick="setFilter('medium', 'water', this)">
-          <span class="chip-dot" style="background:var(--water)"></span>WATER
+          <span class="chip-dot tone-water"></span>WATER
         </div>
         <div class="chip chip-air" data-medium="air" onclick="setFilter('medium', 'air', this)">
-          <span class="chip-dot" style="background:var(--air)"></span>AIR
+          <span class="chip-dot tone-air"></span>AIR
         </div>
         <div class="chip chip-land" data-medium="land" onclick="setFilter('medium', 'land', this)">
-          <span class="chip-dot" style="background:var(--land)"></span>LAND
+          <span class="chip-dot tone-land"></span>LAND
         </div>
       </div>
     </div>
@@ -589,9 +104,9 @@
     <div class="legend">
       <div class="section-label">Data Source</div>
       <div class="legend-items">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--source-nrc)"></div>NRC Spills</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--source-echo)"></div>ECHO Violations</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--source-tri)"></div>TRI Releases</div>
+        <div class="legend-item"><div class="legend-dot tone-nrc"></div>NRC Spills</div>
+        <div class="legend-item"><div class="legend-dot tone-echo"></div>ECHO Violations</div>
+        <div class="legend-item"><div class="legend-dot tone-tri"></div>TRI Releases</div>
       </div>
     </div>
 
@@ -637,14 +152,16 @@ function sourceColor(source) {
   return cssColor(vars[source]) || cssColor('--unknown');
 }
 
-function mediumColor(medium) {
-  const vars = { water: '--water', air: '--air', land: '--land' };
-  return vars[medium] ? cssColor(vars[medium]) : '';
+// Tone classes (css/tokens.css) let CSS apply source/medium colors instead of inline styles.
+const SOURCE_TONES = { NRC: 'tone-nrc', ECHO: 'tone-echo', TRI: 'tone-tri' };
+const MEDIUM_TONES = { water: 'tone-water', air: 'tone-air', land: 'tone-land' };
+
+function sourceTone(source) {
+  return SOURCE_TONES[source] || '';
 }
 
-function typeColor(type) {
-  const vars = { spill: '--spill', violation: '--violation', release: '--release', site: '--site' };
-  return cssColor(vars[type]) || cssColor('--unknown');
+function mediumTone(medium) {
+  return MEDIUM_TONES[medium] || '';
 }
 
 const SOURCE_LABELS = {
@@ -701,13 +218,14 @@ function escapeHtml(value) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function popupSourceLinks(inc) {
   const parts = [];
   if (inc.source === 'NRC') {
-    parts.push(`<button type="button" class="popup-link popup-action" data-action="raw" data-incident-id="${inc.id}">View original NRC record</button>`);
+    parts.push(`<button type="button" class="popup-link popup-action" data-action="raw" data-incident-id="${escapeHtml(inc.id)}">View original NRC record</button>`);
   } else {
     const govUrl = governmentPortalUrl(inc.source, inc.source_id);
     if (govUrl) {
@@ -933,8 +451,8 @@ function renderResults(total, items) {
   }
 
   list.innerHTML = items.map(inc => {
-    const srcColor = sourceColor(inc.source);
-    const medColor = mediumColor(inc.medium);
+    const srcTone = sourceTone(inc.source);
+    const medTone = mediumTone(inc.medium);
     const material = inc.material ? inc.material.substring(0, 80) + (inc.material.length > 80 ? '…' : '') : 'Unknown';
     const date = inc.incident_date || '—';
     const loc = [inc.city, inc.state].filter(Boolean).join(', ') || inc.state || '—';
@@ -942,20 +460,19 @@ function renderResults(total, items) {
       ? `${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}`.trim()
       : null;
 
-    return `<div class="incident-card" id="card-${inc.id}"
-        style="border-left-color: ${srcColor}"
-        onclick="focusIncident('${inc.id}', ${inc.lat}, ${inc.lng})">
+    return `<div class="incident-card ${srcTone}" id="card-${escapeHtml(inc.id)}"
+        onclick="focusIncident('${escapeHtml(inc.id)}', ${Number(inc.lat)}, ${Number(inc.lng)})">
       <div class="card-top">
-        <div class="card-material">${material}</div>
-        <div class="card-type-badge" style="color:${srcColor}">${inc.incident_type.toUpperCase()}</div>
+        <div class="card-material">${escapeHtml(material)}</div>
+        <div class="card-type-badge">${escapeHtml(inc.incident_type.toUpperCase())}</div>
       </div>
-      ${inc.responsible_party ? `<div class="card-party">${inc.responsible_party}</div>` : ''}
+      ${inc.responsible_party ? `<div class="card-party">${escapeHtml(inc.responsible_party)}</div>` : ''}
       <div class="card-meta">
-        <span>${date}</span>
-        <span>${loc}</span>
-        ${qty ? `<span>${qty}</span>` : ''}
-        ${inc.medium && inc.medium !== 'unknown' && medColor
-          ? `<span class="medium-tag" style="color:${medColor}">${inc.medium.toUpperCase()}</span>`
+        <span>${escapeHtml(date)}</span>
+        <span>${escapeHtml(loc)}</span>
+        ${qty ? `<span>${escapeHtml(qty)}</span>` : ''}
+        ${medTone
+          ? `<span class="medium-tag ${medTone}">${escapeHtml(inc.medium.toUpperCase())}</span>`
           : ''}
       </div>
     </div>`;
@@ -972,20 +489,20 @@ function renderMarkers(items) {
   clearMarkers();
   items.forEach(inc => {
     const marker = L.marker([inc.lat, inc.lng], { icon: makePinSvg(inc.source) });
-    const srcColor = sourceColor(inc.source);
     const material = inc.material ? inc.material.substring(0, 120) + (inc.material.length > 120 ? '…' : '') : 'Unknown';
     const qty = inc.quantity && inc.quantity > 0
-      ? `<div class="popup-row">QUANTITY <span>${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}</span></div>` : '';
+      ? `<div class="popup-row">QUANTITY <span>${escapeHtml(`${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}`)}</span></div>` : '';
     const party = inc.responsible_party
-      ? `<div class="popup-row">RESPONSIBLE <span>${inc.responsible_party}</span></div>` : '';
-    const medium = inc.medium && inc.medium !== 'unknown' && mediumColor(inc.medium)
-      ? `<div class="popup-row">MEDIUM <span style="color:${mediumColor(inc.medium)}">${inc.medium.toUpperCase()}</span></div>` : '';
+      ? `<div class="popup-row">RESPONSIBLE <span>${escapeHtml(inc.responsible_party)}</span></div>` : '';
+    const medTone = mediumTone(inc.medium);
+    const medium = medTone
+      ? `<div class="popup-row">MEDIUM <span class="popup-medium ${medTone}">${escapeHtml(inc.medium.toUpperCase())}</span></div>` : '';
 
     marker.bindPopup(`
-      <div class="popup-material">${material}</div>
-      <div class="popup-type" style="color:${srcColor}">${inc.incident_type.toUpperCase()} · ${sourceLabel(inc.source)}</div>
-      <div class="popup-row">DATE <span>${inc.incident_date || '—'}</span></div>
-      <div class="popup-row">LOCATION <span>${[inc.city, inc.state].filter(Boolean).join(', ') || '—'}</span></div>
+      <div class="popup-material">${escapeHtml(material)}</div>
+      <div class="popup-type ${sourceTone(inc.source)}">${escapeHtml(inc.incident_type.toUpperCase())} · ${escapeHtml(sourceLabel(inc.source))}</div>
+      <div class="popup-row">DATE <span>${escapeHtml(inc.incident_date || '—')}</span></div>
+      <div class="popup-row">LOCATION <span>${escapeHtml([inc.city, inc.state].filter(Boolean).join(', ') || '—')}</span></div>
       ${qty}${party}${medium}
       ${popupSourceLinks(inc)}
     `, { maxWidth: 280 });
@@ -1056,20 +573,20 @@ function showLoading() {
   document.getElementById('results-count').innerHTML = 'Searching…';
   document.getElementById('results-list').innerHTML = `<div class="state-msg">
     <div class="spinner"></div>
-    <p style="font-family:var(--serif);font-size:11px;color:var(--text-dim)">Querying database…</p></div>`;
+    <p class="state-detail">Querying database…</p></div>`;
 }
 
 function showError(msg) {
   const el = document.getElementById('error-msg');
   el.textContent = '⚠ ' + msg;
-  el.style.display = 'block';
+  el.classList.add('visible');
   document.getElementById('results-list').innerHTML = `<div class="state-msg">
-    <div class="icon" style="opacity:0.5">⚠</div><p>${msg}</p></div>`;
+    <div class="icon icon-error">⚠</div><p>${escapeHtml(msg)}</p></div>`;
   document.getElementById('results-count').textContent = 'Error';
 }
 
 function hideError() {
-  document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('error-msg').classList.remove('visible');
 }
 
 document.getElementById('address-input').addEventListener('keydown', e => {

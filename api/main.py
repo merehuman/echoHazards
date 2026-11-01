@@ -21,7 +21,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.routes import router
@@ -61,12 +60,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve the frontend map at the root
-@app.get("/", include_in_schema=False)
-async def serve_frontend():
-    index = FRONTEND_DIR / "index.html"
-    if index.exists():
-        return FileResponse(str(index))
-    return {"message": "echoHazards API — see /docs for API documentation"}
-
 app.include_router(router)
+
+# Must be mounted after all routes: a mount at "/" would otherwise shadow them.
+# html=True serves frontend/index.html at "/".
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

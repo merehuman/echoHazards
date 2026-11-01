@@ -1,0 +1,11 @@
+.state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 2rem; text-align: center; }
+.state-msg .icon { font-size: 32px; margin-bottom: 1rem; opacity: 0.3; }
+.state-msg .icon-error { opacity: 0.5; }
+.state-msg p { font-family: var(--serif); font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+.state-msg p.state-detail { font-size: 11px; }
+
+.spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-msg { padding: 0.75rem 1.25rem; font-family: var(--serif); font-size: 11px; color: var(--error); border-bottom: 1px solid var(--border); display: none; }
+.error-msg.visible { display: block; }

@@ -1,0 +1,54 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--serif);
+  font-weight: 300;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.section-label {
+  font-family: var(--serif);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+input[type="text"] {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-hi);
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 400;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus { border-color: var(--border-hi); }
+input[type="text"]::placeholder { color: var(--text-dim); }
+
+input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+
+.btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { border-color: var(--accent); color: var(--accent); }
+.btn-primary:hover { background: var(--accent); color: var(--text-on-accent); }
