@@ -62,4 +62,5 @@
   transition: transform 0.15s ease;
   transform-origin: center;
 }
+.pin-svg circle { fill: var(--tone, var(--unknown)); }
 .leaflet-marker-icon:hover .pin-svg svg { transform: scale(1.45); }

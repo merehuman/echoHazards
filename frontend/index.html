@@ -47,11 +47,11 @@
       <div class="section-label">Location Search</div>
       <div class="search-row">
         <input type="text" id="address-input" placeholder="City, address, or zip code…" autocomplete="off">
-        <button class="btn btn-primary" onclick="geocodeAndSearch()">SEARCH</button>
+        <button type="button" class="btn btn-primary" id="search-btn">SEARCH</button>
       </div>
       <div class="radius-row">
         <span class="radius-label">RADIUS</span>
-        <input type="range" id="radius-slider" min="5" max="200" value="25" step="5" oninput="updateRadius(this.value)">
+        <input type="range" id="radius-slider" min="5" max="200" value="25" step="5">
         <span class="radius-val" id="radius-display">25 km</span>
       </div>
     </div>
@@ -59,14 +59,14 @@
     <div class="filter-section">
       <div class="section-label">Source</div>
       <div class="filter-row" id="source-chips">
-        <div class="chip chip-all active" data-source="" onclick="setFilter('source', '', this)">ALL</div>
-        <div class="chip chip-nrc" data-source="NRC" onclick="setFilter('source', 'NRC', this)">
+        <div class="chip chip-all active" data-source="">ALL</div>
+        <div class="chip chip-nrc" data-source="NRC">
           <span class="chip-dot tone-nrc"></span>NRC SPILLS
         </div>
-        <div class="chip chip-echo" data-source="ECHO" onclick="setFilter('source', 'ECHO', this)">
+        <div class="chip chip-echo" data-source="ECHO">
           <span class="chip-dot tone-echo"></span>ECHO VIOLATIONS
         </div>
-        <div class="chip chip-tri" data-source="TRI" onclick="setFilter('source', 'TRI', this)">
+        <div class="chip chip-tri" data-source="TRI">
           <span class="chip-dot tone-tri"></span>TRI RELEASES
         </div>
       </div>
@@ -75,14 +75,14 @@
     <div class="filter-section">
       <div class="section-label">Medium</div>
       <div class="filter-row" id="medium-chips">
-        <div class="chip chip-all active" data-medium="" onclick="setFilter('medium', '', this)">ALL</div>
-        <div class="chip chip-water" data-medium="water" onclick="setFilter('medium', 'water', this)">
+        <div class="chip chip-all active" data-medium="">ALL</div>
+        <div class="chip chip-water" data-medium="water">
           <span class="chip-dot tone-water"></span>WATER
         </div>
-        <div class="chip chip-air" data-medium="air" onclick="setFilter('medium', 'air', this)">
+        <div class="chip chip-air" data-medium="air">
           <span class="chip-dot tone-air"></span>AIR
         </div>
-        <div class="chip chip-land" data-medium="land" onclick="setFilter('medium', 'land', this)">
+        <div class="chip chip-land" data-medium="land">
           <span class="chip-dot tone-land"></span>LAND
         </div>
       </div>
@@ -116,484 +116,16 @@
 </div>
 
 <div id="record-modal" class="record-modal" aria-hidden="true">
-  <div class="record-modal-backdrop" onclick="closeRecordModal()"></div>
+  <div class="record-modal-backdrop" data-action="close-modal"></div>
   <div class="record-modal-panel" role="dialog" aria-modal="true" aria-labelledby="record-modal-title">
     <div class="record-modal-header">
       <div class="record-modal-title" id="record-modal-title">Original Record</div>
-      <button type="button" class="record-modal-close" onclick="closeRecordModal()">CLOSE</button>
+      <button type="button" class="record-modal-close" data-action="close-modal">CLOSE</button>
     </div>
     <div class="record-modal-body" id="record-modal-body"></div>
   </div>
 </div>
 
-<script>
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000'
-  : window.location.origin;
-const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
-
-// State
-let currentLat = null;
-let currentLng = null;
-let currentRadius = 25;
-let currentSource = '';
-let currentMedium = '';
-let activeCardId = null;
-let radiusCircle = null;
-let markers = {};
-
-// Colors — read from :root CSS variables (single source of truth)
-function cssColor(varName) {
-  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-}
-
-function sourceColor(source) {
-  const vars = { NRC: '--source-nrc', ECHO: '--source-echo', TRI: '--source-tri' };
-  return cssColor(vars[source]) || cssColor('--unknown');
-}
-
-// Tone classes (css/tokens.css) let CSS apply source/medium colors instead of inline styles.
-const SOURCE_TONES = { NRC: 'tone-nrc', ECHO: 'tone-echo', TRI: 'tone-tri' };
-const MEDIUM_TONES = { water: 'tone-water', air: 'tone-air', land: 'tone-land' };
-
-function sourceTone(source) {
-  return SOURCE_TONES[source] || '';
-}
-
-function mediumTone(medium) {
-  return MEDIUM_TONES[medium] || '';
-}
-
-const SOURCE_LABELS = {
-  NRC:  'NRC Spills',
-  ECHO: 'ECHO Violations',
-  TRI:  'TRI Releases',
-};
-
-function sourceLabel(source) {
-  return SOURCE_LABELS[source] || source || '—';
-}
-
-function governmentPortalUrl(source, sourceId) {
-  if (!sourceId) return null;
-  switch (source) {
-    case 'ECHO':
-      return `https://echo.epa.gov/detailed-facility-report?fid=${encodeURIComponent(String(sourceId).trim())}`;
-    case 'TRI': {
-      const trifd = String(sourceId).split('_')[0].trim();
-      if (!trifd) return null;
-      return `https://enviro.epa.gov/enviro/tris_control_v2.tris_print?pPrev=1&tris_id=${encodeURIComponent(trifd)}`;
-    }
-    default:
-      return null;
-  }
-}
-
-function governmentPortalLabel(source) {
-  switch (source) {
-    case 'ECHO': return 'View EPA ECHO facility report';
-    case 'TRI': return 'View EPA TRI facility report';
-    default: return 'View government report';
-  }
-}
-
-const NRC_RAW_FIELDS = [
-  ['SEQNOS', 'NRC incident number'],
-  ['MAT_NAME_OF_MATERIAL', 'Material'],
-  ['MAT_AMOUNT_OF_MATERIAL', 'Amount'],
-  ['MAT_UNIT_OF_MEASURE', 'Unit'],
-  ['COMMON_INCIDENT_DATE_TIME', 'Incident date/time'],
-  ['CALL_RESPONSIBLE_COMPANY', 'Responsible company'],
-  ['COMMON_INCIDENT_LOCATION', 'Incident location'],
-  ['COMMON_LOCATION_STREET1', 'Street'],
-  ['COMMON_LOCATION_NEAREST_CITY', 'City'],
-  ['COMMON_LOCATION_STATE', 'State'],
-  ['COMMON_LOCATION_ZIP', 'ZIP'],
-  ['COMMON_INCIDENT_CAUSE', 'Cause'],
-  ['COMMON_INCIDENT_NATURE', 'Nature'],
-];
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function popupSourceLinks(inc) {
-  const parts = [];
-  if (inc.source === 'NRC') {
-    parts.push(`<button type="button" class="popup-link popup-action" data-action="raw" data-incident-id="${escapeHtml(inc.id)}">View original NRC record</button>`);
-  } else {
-    const govUrl = governmentPortalUrl(inc.source, inc.source_id);
-    if (govUrl) {
-      parts.push(`<button type="button" class="popup-link popup-action" data-action="external" data-report-url="${escapeHtml(govUrl)}">${governmentPortalLabel(inc.source)}</button>`);
-    }
-  }
-  if (!parts.length) return '';
-  return `<div class="popup-links">${parts.join('')}</div>`;
-}
-
-function bindPopupActions(popupEl) {
-  if (!popupEl) return;
-  popupEl.querySelectorAll('.popup-action').forEach((btn) => {
-    btn.addEventListener('click', (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const action = btn.dataset.action;
-      if (action === 'external' && btn.dataset.reportUrl) {
-        window.open(btn.dataset.reportUrl, '_blank', 'noopener,noreferrer');
-      } else if (action === 'raw' && btn.dataset.incidentId) {
-        showRawRecord(btn.dataset.incidentId);
-      }
-    }, { once: true });
-  });
-}
-
-function renderNrcRecord(data) {
-  const raw = data.raw || {};
-  const fields = NRC_RAW_FIELDS
-    .filter(([key]) => raw[key])
-    .map(([key, label]) => `
-      <div class="record-field">
-        <span class="record-field-label">${label}</span>
-        <span class="record-field-value">${escapeHtml(raw[key])}</span>
-      </div>`)
-    .join('');
-
-  return `
-    ${fields || '<div class="record-field"><span class="record-field-value">No NRC fields available.</span></div>'}
-    <div class="record-note">
-      NRC does not publish individual spill pages online. This record is the original data saved from the
-      <a href="https://nrc.uscg.mil/FOIAdata.aspx" target="_blank" rel="noopener noreferrer">NRC FOIA spreadsheet release</a>
-      (incident SEQNOS ${escapeHtml(data.source_id || raw.SEQNOS || '—')}).
-    </div>
-    <details class="record-raw">
-      <summary>Full original record (JSON)</summary>
-      <pre>${escapeHtml(JSON.stringify(raw, null, 2))}</pre>
-    </details>`;
-}
-
-function closeRecordModal() {
-  const modal = document.getElementById('record-modal');
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-  document.getElementById('record-modal-body').innerHTML = '';
-}
-
-async function showRawRecord(id) {
-  const modal = document.getElementById('record-modal');
-  const body = document.getElementById('record-modal-body');
-  const title = document.getElementById('record-modal-title');
-
-  title.textContent = 'Loading original record…';
-  body.innerHTML = '<div class="record-field"><span class="record-field-value">Loading…</span></div>';
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-
-  try {
-    const res = await fetch(`${API_BASE}/incidents/${id}`);
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const data = await res.json();
-    title.textContent = `${sourceLabel(data.source)} · Original Record`;
-    body.innerHTML = data.source === 'NRC'
-      ? renderNrcRecord(data)
-      : `<div class="record-note">Original ${escapeHtml(data.source)} record from the federal source database.</div>
-         <details class="record-raw" open>
-           <summary>Full original record (JSON)</summary>
-           <pre>${escapeHtml(JSON.stringify(data.raw || {}, null, 2))}</pre>
-         </details>`;
-  } catch (e) {
-    title.textContent = 'Original Record';
-    body.innerHTML = '<div class="record-field"><span class="record-field-value">Could not load the original record. Make sure the API is running.</span></div>';
-  }
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeRecordModal();
-    closeHelpPopover();
-  }
-});
-
-(function initHelpPopover() {
-  const btn = document.getElementById('help-btn');
-  const popover = document.getElementById('help-popover');
-  if (!btn || !popover) return;
-
-  function closeHelpPopover() {
-    popover.classList.remove('open');
-    btn.setAttribute('aria-expanded', 'false');
-  }
-
-  window.closeHelpPopover = closeHelpPopover;
-
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = popover.classList.toggle('open');
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!popover.classList.contains('open')) return;
-    if (btn.contains(e.target) || popover.contains(e.target)) return;
-    closeHelpPopover();
-  });
-})();
-
-function makePinSvg(source) {
-  const color = sourceColor(source);
-  const shape = `<circle cx="10" cy="10" r="7" fill="${color}"/>`;
-
-  return L.divIcon({
-    html: `<div class="pin-wrap"><div class="pin-svg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">${shape}</svg></div></div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
-    className: '',
-  });
-}
-
-// Map init. CARTO raster tiles now watermark every tile without an API key.
-// OpenFreeMap Positron is the same light basemap, served as vector tiles with no key.
-// Zoom animation is off so the vector layer stays aligned with Leaflet markers.
-const map = L.map('map', { center: [39.5, -98.35], zoom: 4, zoomAnimation: false });
-L.maplibreGL({
-  style: 'https://tiles.openfreemap.org/styles/positron',
-  attributionControl: false,
-}).addTo(map);
-map.attributionControl.addAttribution(
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://openfreemap.org">OpenFreeMap</a> | NRC / EPA ECHO / EPA TRI'
-);
-
-map.on('click', function(e) {
-  currentLat = e.latlng.lat;
-  currentLng = e.latlng.lng;
-  document.getElementById('address-input').value = '';
-  document.getElementById('address-input').placeholder = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
-  fetchIncidents();
-});
-
-// Status check
-async function checkStatus() {
-  try {
-    const res = await fetch(`${API_BASE}/health`);
-    const data = await res.json();
-    document.getElementById('db-status').innerHTML =
-      data.status === 'ok'
-        ? '⬤ <span class="live">API CONNECTED</span>'
-        : '⬤ <span class="status-error">API DEGRADED</span>';
-    const pipeline = await fetch(`${API_BASE}/pipeline/status`);
-    const pd = await pipeline.json();
-    document.getElementById('total-count').textContent =
-      pd.total_incidents.toLocaleString() + ' incidents';
-  } catch(e) {
-    document.getElementById('db-status').innerHTML = '⬤ <span class="status-error">API OFFLINE</span>';
-  }
-}
-
-// Geocode
-async function geocodeAndSearch() {
-  const query = document.getElementById('address-input').value.trim();
-  if (!query) return;
-  showLoading();
-  try {
-    const res = await fetch(
-      `${NOMINATIM}?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=us`,
-      { headers: { 'Accept-Language': 'en' } }
-    );
-    const results = await res.json();
-    if (!results.length) { showError('Location not found.'); return; }
-    currentLat = parseFloat(results[0].lat);
-    currentLng = parseFloat(results[0].lon);
-    map.setView([currentLat, currentLng], 10);
-    fetchIncidents();
-  } catch(e) {
-    showError('Geocoding failed. Check your connection.');
-  }
-}
-
-// Fetch
-async function fetchIncidents() {
-  if (currentLat === null) return;
-  showLoading();
-
-  let url = `${API_BASE}/incidents?lat=${currentLat}&lng=${currentLng}&radius_km=${currentRadius}&page_size=200`;
-  if (currentSource) url += `&source=${currentSource}`;
-  if (currentMedium) url += `&medium=${currentMedium}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const data = await res.json();
-    renderResults(data.total, data.results);
-    renderMarkers(data.results);
-    drawRadiusCircle();
-    hideError();
-  } catch(e) {
-    showError('Failed to fetch incidents. Is the API running?');
-  }
-}
-
-// Render sidebar list
-function renderResults(total, items) {
-  document.getElementById('results-count').innerHTML =
-    `<strong>${total.toLocaleString()}</strong> incidents found`;
-
-  const list = document.getElementById('results-list');
-
-  if (!items.length) {
-    list.innerHTML = `<div class="state-msg"><div class="icon">◌</div>
-      <p>No incidents found<br>within ${currentRadius}km.<br>Try expanding the radius.</p></div>`;
-    return;
-  }
-
-  list.innerHTML = items.map(inc => {
-    const srcTone = sourceTone(inc.source);
-    const medTone = mediumTone(inc.medium);
-    const material = inc.material ? inc.material.substring(0, 80) + (inc.material.length > 80 ? '…' : '') : 'Unknown';
-    const date = inc.incident_date || '—';
-    const loc = [inc.city, inc.state].filter(Boolean).join(', ') || inc.state || '—';
-    const qty = inc.quantity && inc.quantity > 0
-      ? `${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}`.trim()
-      : null;
-
-    return `<div class="incident-card ${srcTone}" id="card-${escapeHtml(inc.id)}"
-        onclick="focusIncident('${escapeHtml(inc.id)}', ${Number(inc.lat)}, ${Number(inc.lng)})">
-      <div class="card-top">
-        <div class="card-material">${escapeHtml(material)}</div>
-        <div class="card-type-badge">${escapeHtml(inc.incident_type.toUpperCase())}</div>
-      </div>
-      ${inc.responsible_party ? `<div class="card-party">${escapeHtml(inc.responsible_party)}</div>` : ''}
-      <div class="card-meta">
-        <span>${escapeHtml(date)}</span>
-        <span>${escapeHtml(loc)}</span>
-        ${qty ? `<span>${escapeHtml(qty)}</span>` : ''}
-        ${medTone
-          ? `<span class="medium-tag ${medTone}">${escapeHtml(inc.medium.toUpperCase())}</span>`
-          : ''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// Render map markers
-function clearMarkers() {
-  Object.values(markers).forEach(m => map.removeLayer(m));
-  markers = {};
-}
-
-function renderMarkers(items) {
-  clearMarkers();
-  items.forEach(inc => {
-    const marker = L.marker([inc.lat, inc.lng], { icon: makePinSvg(inc.source) });
-    const material = inc.material ? inc.material.substring(0, 120) + (inc.material.length > 120 ? '…' : '') : 'Unknown';
-    const qty = inc.quantity && inc.quantity > 0
-      ? `<div class="popup-row">QUANTITY <span>${escapeHtml(`${inc.quantity.toLocaleString()} ${inc.quantity_unit || ''}`)}</span></div>` : '';
-    const party = inc.responsible_party
-      ? `<div class="popup-row">RESPONSIBLE <span>${escapeHtml(inc.responsible_party)}</span></div>` : '';
-    const medTone = mediumTone(inc.medium);
-    const medium = medTone
-      ? `<div class="popup-row">MEDIUM <span class="popup-medium ${medTone}">${escapeHtml(inc.medium.toUpperCase())}</span></div>` : '';
-
-    marker.bindPopup(`
-      <div class="popup-material">${escapeHtml(material)}</div>
-      <div class="popup-type ${sourceTone(inc.source)}">${escapeHtml(inc.incident_type.toUpperCase())} · ${escapeHtml(sourceLabel(inc.source))}</div>
-      <div class="popup-row">DATE <span>${escapeHtml(inc.incident_date || '—')}</span></div>
-      <div class="popup-row">LOCATION <span>${escapeHtml([inc.city, inc.state].filter(Boolean).join(', ') || '—')}</span></div>
-      ${qty}${party}${medium}
-      ${popupSourceLinks(inc)}
-    `, { maxWidth: 280 });
-
-    marker.on('popupopen', (e) => {
-      const el = e.popup.getElement();
-      if (!el) return;
-      el.addEventListener('click', (ev) => ev.stopPropagation(), { once: true });
-      bindPopupActions(el);
-    });
-    marker.on('click', () => { setActiveCard(inc.id); scrollToCard(inc.id); });
-    marker.addTo(map);
-    markers[inc.id] = marker;
-  });
-}
-
-// Radius circle
-function drawRadiusCircle() {
-  if (radiusCircle) map.removeLayer(radiusCircle);
-  if (currentLat === null) return;
-  radiusCircle = L.circle([currentLat, currentLng], {
-    radius: currentRadius * 1000,
-    className: 'radius-circle',
-    interactive: false,
-  }).addTo(map);
-}
-
-// Card focus
-function focusIncident(id, lat, lng) {
-  setActiveCard(id);
-  map.setView([lat, lng], Math.max(map.getZoom(), 12));
-  if (markers[id]) markers[id].openPopup();
-}
-
-function setActiveCard(id) {
-  if (activeCardId) {
-    const prev = document.getElementById(`card-${activeCardId}`);
-    if (prev) prev.classList.remove('active');
-  }
-  activeCardId = id;
-  const card = document.getElementById(`card-${id}`);
-  if (card) card.classList.add('active');
-}
-
-function scrollToCard(id) {
-  const card = document.getElementById(`card-${id}`);
-  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// Filter controls
-function setFilter(type, value, el) {
-  const group = type === 'source' ? 'source-chips' : 'medium-chips';
-  document.querySelectorAll(`#${group} .chip`).forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  if (type === 'source') currentSource = value;
-  else currentMedium = value;
-  if (currentLat !== null) fetchIncidents();
-}
-
-function updateRadius(val) {
-  currentRadius = parseInt(val);
-  document.getElementById('radius-display').textContent = `${val} km`;
-  if (currentLat !== null) fetchIncidents();
-}
-
-// UI states
-function showLoading() {
-  document.getElementById('results-count').innerHTML = 'Searching…';
-  document.getElementById('results-list').innerHTML = `<div class="state-msg">
-    <div class="spinner"></div>
-    <p class="state-detail">Querying database…</p></div>`;
-}
-
-function showError(msg) {
-  const el = document.getElementById('error-msg');
-  el.textContent = '⚠ ' + msg;
-  el.classList.add('visible');
-  document.getElementById('results-list').innerHTML = `<div class="state-msg">
-    <div class="icon icon-error">⚠</div><p>${escapeHtml(msg)}</p></div>`;
-  document.getElementById('results-count').textContent = 'Error';
-}
-
-function hideError() {
-  document.getElementById('error-msg').classList.remove('visible');
-}
-
-document.getElementById('address-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') geocodeAndSearch();
-});
-
-checkStatus();
-</script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
