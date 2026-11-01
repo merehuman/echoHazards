@@ -1,0 +1,26 @@
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0.6rem 1.25rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pagination[hidden] { display: none; }
+
+.pagination .btn { padding: 5px 10px; font-size: 10px; }
+.pagination .btn:disabled,
+.pagination .btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-dim);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pagination-position {
+  font-family: var(--serif);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}

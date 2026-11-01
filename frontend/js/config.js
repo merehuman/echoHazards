@@ -3,8 +3,10 @@ const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname
 export const API_BASE = isLocalHost ? 'http://localhost:8000' : window.location.origin;
 export const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 
-export const PAGE_SIZE = 200;
+export const PAGE_SIZE = 50;
 export const DEFAULT_RADIUS_KM = 25;
+/** Wait this long after the radius slider stops moving before searching. */
+export const RADIUS_DEBOUNCE_MS = 300;
 
 export const MAP_DEFAULT_CENTER = [39.5, -98.35];
 export const MAP_DEFAULT_ZOOM = 4;

@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/components/help-popover.css">
   <link rel="stylesheet" href="css/components/chips.css">
   <link rel="stylesheet" href="css/components/incident-card.css">
+  <link rel="stylesheet" href="css/components/pagination.css">
   <link rel="stylesheet" href="css/components/states.css">
   <link rel="stylesheet" href="css/components/modal.css">
   <link rel="stylesheet" href="css/map.css">
@@ -100,6 +101,12 @@
         <p>Search an address or city<br>to find nearby environmental<br>incidents across NRC, ECHO,<br>and TRI federal databases.</p>
       </div>
     </div>
+
+    <nav class="pagination" id="pagination" aria-label="Results pages" hidden>
+      <button type="button" class="btn" data-action="prev">‹ PREV</button>
+      <span class="pagination-position" data-role="position" aria-live="polite"></span>
+      <button type="button" class="btn" data-action="next">NEXT ›</button>
+    </nav>
 
     <div class="legend">
       <div class="section-label">Data Source</div>

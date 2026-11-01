@@ -9,6 +9,7 @@ Key design decisions:
 """
 
 import logging
+import math
 from typing import Optional
 from uuid import UUID
 
@@ -128,11 +129,15 @@ def list_incidents(
     # Paginate
     offset = (page - 1) * page_size
     incidents = q.offset(offset).limit(page_size).all()
+    total_pages = math.ceil(total / page_size)
 
     return IncidentListResponse(
         total=total,
         page=page,
         page_size=page_size,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_prev=page > 1,
         results=incidents,
     )
 

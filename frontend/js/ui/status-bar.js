@@ -11,10 +11,17 @@ export async function loadStatus() {
   try {
     const health = await fetchHealth();
     statusEl.innerHTML = health.status === 'ok' ? STATUS_HTML.ok : STATUS_HTML.degraded;
+  } catch {
+    statusEl.innerHTML = STATUS_HTML.offline;
+    return;
+  }
+
+  // A pipeline-status failure leaves the total as "—" without marking a reachable API offline.
+  try {
     const pipeline = await fetchPipelineStatus();
     document.getElementById('total-count').textContent =
       pipeline.total_incidents.toLocaleString() + ' incidents';
   } catch {
-    statusEl.innerHTML = STATUS_HTML.offline;
+    // keep placeholder
   }
 }

@@ -1,4 +1,4 @@
-import { DEFAULT_RADIUS_KM } from './config.js';
+import { DEFAULT_RADIUS_KM, PAGE_SIZE } from './config.js';
 
 /**
  * Single source of truth for the search UI.
@@ -6,6 +6,7 @@ import { DEFAULT_RADIUS_KM } from './config.js';
  * status:  'idle' (no search yet) | 'loading' | 'ready' | 'error'
  * error:   message for the error banner; cleared only by a successful search,
  *          so it stays visible while a retry is loading.
+ * page:    1-based page being requested/shown; pageSize and totalPages echo the API response.
  */
 const state = {
   lat: null,
@@ -13,9 +14,12 @@ const state = {
   radiusKm: DEFAULT_RADIUS_KM,
   source: '',
   medium: '',
+  page: 1,
+  pageSize: PAGE_SIZE,
   status: 'idle',
   error: null,
   total: 0,
+  totalPages: 0,
   results: [],
   activeIncidentId: null,
 };

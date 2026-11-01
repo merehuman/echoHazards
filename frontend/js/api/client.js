@@ -8,13 +8,14 @@ export class ApiError extends Error {
   }
 }
 
-async function getJson(path) {
-  const res = await fetch(`${API_BASE}${path}`);
+async function getJson(path, { signal } = {}) {
+  const res = await fetch(`${API_BASE}${path}`, { signal });
   if (!res.ok) throw new ApiError(res.status);
   return res.json();
 }
 
-export function fetchIncidents({ lat, lng, radiusKm, source, medium, page = 1, pageSize }) {
+/** Pass an AbortSignal to cancel; a cancelled request rejects with a DOMException named 'AbortError'. */
+export function fetchIncidents({ lat, lng, radiusKm, source, medium, page = 1, pageSize }, { signal } = {}) {
   const params = new URLSearchParams({
     lat,
     lng,
@@ -24,7 +25,7 @@ export function fetchIncidents({ lat, lng, radiusKm, source, medium, page = 1, p
   });
   if (source) params.set('source', source);
   if (medium) params.set('medium', medium);
-  return getJson(`/incidents?${params}`);
+  return getJson(`/incidents?${params}`, { signal });
 }
 
 export function fetchIncident(id) {

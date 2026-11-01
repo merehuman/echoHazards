@@ -48,14 +48,22 @@ function renderError(message) {
     <div class="icon icon-error">⚠</div><p>${escapeHtml(message)}</p></div>`;
 }
 
-function renderReady({ total, results, radiusKm }) {
-  countEl.innerHTML = `<strong>${total.toLocaleString()}</strong> incidents found`;
-  if (!results.length) {
+function summaryHtml({ total, results, page, pageSize }) {
+  if (!results.length) return `<strong>${total.toLocaleString()}</strong> incidents found`;
+  const start = (page - 1) * pageSize + 1;
+  const end = start + results.length - 1;
+  return `Showing <strong>${start.toLocaleString()}–${end.toLocaleString()}</strong> of <strong>${total.toLocaleString()}</strong> incidents`;
+}
+
+function renderReady(state) {
+  countEl.innerHTML = summaryHtml(state);
+  if (!state.results.length) {
     listEl.innerHTML = `<div class="state-msg"><div class="icon">◌</div>
-      <p>No incidents found<br>within ${escapeHtml(radiusKm)}km.<br>Try expanding the radius.</p></div>`;
+      <p>No incidents found<br>within ${escapeHtml(state.radiusKm)}km.<br>Try expanding the radius.</p></div>`;
     return;
   }
-  listEl.innerHTML = results.map(cardHtml).join('');
+  listEl.innerHTML = state.results.map(cardHtml).join('');
+  listEl.scrollTop = 0;
 }
 
 /** Renders the count, list body, and error banner for the current search status. */
