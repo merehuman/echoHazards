@@ -1,4 +1,5 @@
-import { sourceTone } from '../sources.js';
+import { sourceLabel, sourceTone } from '../sources.js';
+import { formatMaterial } from '../utils/format.js';
 import { getMap } from './map.js';
 import { createPopupContent } from './popup.js';
 
@@ -29,6 +30,8 @@ export function renderMarkers(items, { onSelect, onShowRecord }) {
     marker.bindPopup(createPopupContent(inc, { onShowRecord }), { maxWidth: 280 });
     marker.on('click', () => onSelect(inc.id));
     marker.addTo(map);
+    // Leaflet gives keyboard-focusable markers role="button" but no name; aria-label avoids a hover tooltip.
+    marker.getElement()?.setAttribute('aria-label', `${formatMaterial(inc, 80)} (${sourceLabel(inc.source)})`);
     markers[inc.id] = marker;
   });
 }

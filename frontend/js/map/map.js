@@ -33,6 +33,13 @@ export function focusLocation(lat, lng) {
   map.setView([lat, lng], Math.max(map.getZoom(), FOCUS_MIN_ZOOM));
 }
 
+/** On narrow screens the map sits above the results and can scroll off-screen; bring it back. */
+export function revealMap() {
+  if (map.getContainer().getBoundingClientRect().top < 0) {
+    map.getContainer().scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 export function drawRadiusCircle(lat, lng, radiusKm) {
   if (radiusCircle) map.removeLayer(radiusCircle);
   if (lat === null) return;

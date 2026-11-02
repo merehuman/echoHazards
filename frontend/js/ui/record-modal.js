@@ -41,17 +41,30 @@ function genericRecordHtml(data) {
     </details>`;
 }
 
+// Everything outside the modal; made inert while it is open so focus can't leave the dialog.
+const background = () => document.querySelectorAll('body > header, body > main');
+let returnFocusTo = null;
+
+const isOpen = () => modal.classList.contains('open');
+
 export function closeRecordModal() {
+  if (!isOpen()) return;
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   bodyEl.innerHTML = '';
+  background().forEach((el) => { el.inert = false; });
+  if (returnFocusTo?.isConnected) returnFocusTo.focus();
+  returnFocusTo = null;
 }
 
 export async function openRecordModal(id) {
+  if (!isOpen()) returnFocusTo = document.activeElement;
   titleEl.textContent = 'Loading original record…';
   bodyEl.innerHTML = fieldHtml('Loading…');
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
+  background().forEach((el) => { el.inert = true; });
+  modal.querySelector('.record-modal-close').focus();
 
   try {
     const data = await fetchIncident(id);

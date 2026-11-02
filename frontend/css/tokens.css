@@ -6,12 +6,13 @@
   --border:          #e2e5ea;
   --border-hi:       #c5cad3;
   --text:            #3d4654;
-  --text-dim:        #909db0;
-  --text-hi:         #8b8b8b;
+  /* --text-dim and --text-hi meet WCAG AA (4.5:1) on white */
+  --text-dim:        #6b7789;
+  --text-hi:         #6e6e6e;
   --text-on-accent:  #ffffff;
 
   /* ── Status ── */
-  --success:         #4caf50;
+  --success:         #2e7d32;
   --error:           #ef5350;
 
   /* ── Accent (buttons, wordmark highlight, links) ── */

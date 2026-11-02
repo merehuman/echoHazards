@@ -20,6 +20,9 @@ export function initHelpPopover() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') close();
+    if (e.key !== 'Escape' || !popover.classList.contains('open')) return;
+    const hadFocus = btn.contains(document.activeElement) || popover.contains(document.activeElement);
+    close();
+    if (hadFocus) btn.focus();
   });
 }

@@ -9,13 +9,24 @@ export function initPagination({ getPage, onPageChange }) {
   nextBtn.addEventListener('click', () => onPageChange(getPage() + 1));
 }
 
-/** Hidden until a search has results; buttons are disabled at the ends and while loading. */
+/**
+ * Hidden until a search has results. Buttons are disabled at the ends; while loading they are only
+ * aria-disabled, because disabling the focused button would drop keyboard focus to <body>.
+ */
 export function renderPagination({ page, totalPages, total, status }) {
   nav.hidden = total === 0 || (status !== 'ready' && status !== 'loading');
   if (nav.hidden) return;
 
   const loading = status === 'loading';
   positionEl.textContent = `Page ${page.toLocaleString()} of ${totalPages.toLocaleString()}`;
-  prevBtn.disabled = loading || page <= 1;
-  nextBtn.disabled = loading || page >= totalPages;
+
+  const focused = document.activeElement;
+  prevBtn.disabled = page <= 1;
+  nextBtn.disabled = page >= totalPages;
+  [prevBtn, nextBtn].forEach((btn) => btn.setAttribute('aria-disabled', String(loading || btn.disabled)));
+
+  if (focused?.disabled) {
+    const other = focused === prevBtn ? nextBtn : prevBtn;
+    if (!other.disabled) other.focus();
+  }
 }

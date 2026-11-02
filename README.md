@@ -160,14 +160,34 @@ See `scripts/reset_db.py` for what this does.
 pytest tests/ -v
 ```
 
+`tests/test_incidents_pagination.py` is an integration test that needs the PostGIS container running (`docker-compose up db -d`). It creates and resets its own database, `echo_hazards_test`, on the server named in `DATABASE_URL`. Your dev data is never touched. Set `TEST_DATABASE_URL` to use a different database. If no server is reachable, those tests are skipped and the unit tests still run.
+
 ### Project structure
 
 ```
 echoHazards/
 ├── api/
-│   ├── main.py          # FastAPI app, CORS middleware, lifespan hooks
+│   ├── main.py          # FastAPI app, CORS middleware, lifespan hooks, serves frontend/ at /
 │   ├── routes.py        # All route handlers — proximity search, pipeline status
 │   └── schemas.py       # Pydantic request/response models
+├── frontend/            # Map UI — plain HTML/CSS/ES modules, no build step
+│   ├── index.html       # Markup only; loads css/ and js/main.js
+│   ├── css/
+│   │   ├── tokens.css   # Colors, fonts, tone-* classes
+│   │   ├── base.css     # Reset, typography, inputs, buttons
+│   │   ├── layout.css   # Header, sidebar, map area, mobile layout
+│   │   ├── map.css      # Leaflet popups and pins
+│   │   └── components/  # chips, incident-card, pagination, modal, states, help-popover
+│   └── js/
+│       ├── main.js      # Entry point: wires events → API requests → rendering
+│       ├── state.js     # Single state store with subscribe/notify
+│       ├── config.js    # API base URL, page size, map defaults
+│       ├── sources.js   # Source/medium labels, colors, government portal links
+│       ├── api/         # fetch wrappers for the API
+│       ├── services/    # Address geocoding (Nominatim)
+│       ├── map/         # Leaflet map, markers, popups
+│       ├── ui/          # Search form, filters, results list, pagination, modal, status bar
+│       └── utils/       # HTML escaping, formatting
 ├── ingestors/
 │   ├── base.py          # BaseIngestor: run lifecycle, upsert, completeness checks
 │   ├── nrc.py           # NRC xlsx ingestor — joins CALLS + INCIDENT_COMMONS + MATERIAL_INVOLVED
@@ -179,7 +199,8 @@ echoHazards/
 │   └── versions/
 │       └── 001_initial_schema.py   # PostGIS-enabled schema migration
 ├── tests/
-│   └── test_nrc_ingestor.py        # Unit tests for NRC normalization logic
+│   ├── test_nrc_ingestor.py        # Unit tests for NRC normalization logic
+│   └── test_incidents_pagination.py  # Integration tests for /incidents sorting + pagination
 ├── scripts/
 │   ├── run_ingestor.py  # CLI: python scripts/run_ingestor.py nrc|echo|all
 │   └── reset_db.py      # Wipe and recreate local database for development
@@ -230,7 +251,9 @@ GET /incidents
   &state=CA                # filter by two-letter state code
   &since=2024-01-01        # incidents on or after this date
   &until=2025-12-31        # incidents on or before this date
-  &page=1&page_size=50     # pagination (max page_size: 200)
+  &page=1&page_size=50     # pagination (default page_size: 50, max: 200)
+  # Sorted nearest first with lat/lng, otherwise newest first; ties broken by id
+  # Response: { total, page, page_size, total_pages, has_next, has_prev, results: [...] }
 
 GET /incidents/{id}               # single record including full raw source data
 GET /incidents/summary/by-state   # incident count per state

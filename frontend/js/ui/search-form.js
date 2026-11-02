@@ -17,6 +17,7 @@ export function initSearchForm({ onSubmit, onRadiusChange }) {
 
 export function renderRadius(radiusKm) {
   document.getElementById('radius-display').textContent = `${radiusKm} km`;
+  document.getElementById('radius-slider').setAttribute('aria-valuetext', `${radiusKm} km`);
 }
 
 /** Shows the coordinates of a map-picked location in place of a typed address. */

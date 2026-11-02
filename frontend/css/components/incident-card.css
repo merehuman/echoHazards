@@ -1,15 +1,23 @@
 .incident-card {
+  display: block;
+  width: 100%;
   padding: 0.9rem 1.25rem;
+  background: transparent;
+  border: none;
   border-bottom: 1px solid var(--border);
+  border-left: 2px solid var(--tone, var(--unknown));
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   transition: background 0.1s;
-  border-left: 2px solid var(--tone, var(--unknown));
 }
 .incident-card:hover { background: var(--hover-bg); }
 .incident-card.active { background: var(--active-card-bg); }
+.incident-card:focus-visible { outline-offset: -2px; }
 
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.card-material { font-size: 13px; font-weight: 500; color: var(--text-hi); line-height: 1.3; }
+.card-material { display: block; font-size: 13px; font-weight: 500; color: var(--text-hi); line-height: 1.3; }
 .card-type-badge {
   font-family: var(--serif);
   font-size: 9px;
@@ -31,7 +39,7 @@
   flex-wrap: wrap;
 }
 .card-meta span { white-space: nowrap; }
-.card-party { font-size: 11px; color: var(--text-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-party { display: block; font-size: 11px; color: var(--text-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .medium-tag {
   font-family: var(--serif);

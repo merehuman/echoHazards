@@ -18,7 +18,9 @@ export function renderFilters({ source, medium }) {
   const selected = { source, medium };
   Object.entries(GROUPS).forEach(([type, group]) => {
     group.querySelectorAll('.chip').forEach((chip) => {
-      chip.classList.toggle('active', chip.dataset[type] === selected[type]);
+      const isSelected = chip.dataset[type] === selected[type];
+      chip.classList.toggle('active', isSelected);
+      chip.setAttribute('aria-pressed', String(isSelected));
     });
   });
 }

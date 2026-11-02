@@ -10,8 +10,8 @@
 .pagination[hidden] { display: none; }
 
 .pagination .btn { padding: 5px 10px; font-size: 10px; }
-.pagination .btn:disabled,
-.pagination .btn:disabled:hover {
+.pagination .btn[aria-disabled="true"],
+.pagination .btn[aria-disabled="true"]:hover {
   border-color: var(--border);
   color: var(--text-dim);
   opacity: 0.5;

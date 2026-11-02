@@ -1,8 +1,11 @@
 .chip {
   font-family: var(--serif);
   font-size: 10px;
+  font-weight: inherit;
+  line-height: inherit;
   letter-spacing: 0.05em;
   padding: 4px 8px;
+  background: transparent;
   border: 1px solid var(--border);
   color: var(--text-dim);
   cursor: pointer;

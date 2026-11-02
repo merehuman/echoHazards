@@ -94,3 +94,30 @@ header {
 
 /* ── MAP CONTAINER ── */
 #map { flex: 1; background: var(--map-bg); }
+
+/* ── NARROW SCREENS: map on top, search and results below, page scrolls ── */
+@media (max-width: 768px) {
+  body { height: auto; min-height: 100vh; overflow: auto; }
+
+  header {
+    height: auto;
+    min-height: 48px;
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+  .status-bar { gap: 1rem; }
+
+  .layout { flex-direction: column; overflow: visible; }
+
+  #map {
+    order: -1;
+    flex: none;
+    height: 45vh;
+    min-height: 260px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar { width: 100%; border-right: none; overflow: visible; }
+  .results-list { flex: none; overflow: visible; }
+}

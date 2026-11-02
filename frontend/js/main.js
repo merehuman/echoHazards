@@ -1,6 +1,6 @@
 import { fetchIncidents } from './api/client.js';
 import { PAGE_SIZE, RADIUS_DEBOUNCE_MS, SEARCH_ZOOM } from './config.js';
-import { drawRadiusCircle, focusLocation, initMap, setView } from './map/map.js';
+import { drawRadiusCircle, focusLocation, initMap, revealMap, setView } from './map/map.js';
 import { openMarkerPopup, renderMarkers } from './map/markers.js';
 import { geocode } from './services/geocode.js';
 import { changed, getState, setState, subscribe } from './state.js';
@@ -8,7 +8,7 @@ import { initFilters, renderFilters } from './ui/filters.js';
 import { initHelpPopover } from './ui/help-popover.js';
 import { initPagination, renderPagination } from './ui/pagination.js';
 import { initRecordModal, openRecordModal } from './ui/record-modal.js';
-import { initResultsList, renderActiveCard, renderResultsList, scrollToCard } from './ui/results-list.js';
+import { initResultsList, renderActiveCard, renderResultsList, revealResults, scrollToCard } from './ui/results-list.js';
 import { initSearchForm, renderRadius, showPickedLocation } from './ui/search-form.js';
 import { loadStatus } from './ui/status-bar.js';
 
@@ -72,10 +72,11 @@ function newSearch(patch) {
   runSearch({ ...patch, page: 1, total: 0, totalPages: 0 });
 }
 
-function goToPage(page) {
+async function goToPage(page) {
   const { totalPages, status } = getState();
   if (status === 'loading' || page < 1 || page > totalPages) return;
-  runSearch({ page });
+  await runSearch({ page });
+  revealResults();
 }
 
 function changeRadius(radiusKm) {
@@ -110,6 +111,7 @@ function selectFromList(id) {
   const inc = getState().results.find((r) => r.id === id);
   if (!inc) return;
   setState({ activeIncidentId: id });
+  revealMap();
   focusLocation(inc.lat, inc.lng);
   openMarkerPopup(id);
 }
